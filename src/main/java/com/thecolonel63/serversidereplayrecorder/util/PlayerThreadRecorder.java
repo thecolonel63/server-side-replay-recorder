@@ -38,7 +38,9 @@ public class PlayerThreadRecorder {
     public final ClientConnection connection;
     public final MinecraftServer ms = ServerSideReplayRecorderServer.server;
     private final File folderToRecordTo;
-    public GameProfile playerProfile;
+//    public GameProfile playerProfile;
+    public UUID playerId;
+    public String playerName;
     private long start;
     private NetworkState state = NetworkState.LOGIN;
     private BufferedOutputStream bos;
@@ -93,9 +95,9 @@ public class PlayerThreadRecorder {
         Calendar cal = Calendar.getInstance();
         cal.setTimeInMillis(start);
         String fileName = cal.get(Calendar.YEAR) + "_" + String.format("%02d", (cal.get(Calendar.MONTH) + 1)) + "_" + String.format("%02d", (cal.get(Calendar.DAY_OF_MONTH))) + "_" + String.format("%02d", (cal.get(Calendar.HOUR_OF_DAY))) + "_" + String.format("%02d", (cal.get(Calendar.MINUTE))) + "_" + String.format("%02d", (cal.get(Calendar.SECOND))) + ".mcpr";
-        String name = (playerProfile != null && playerProfile.getName() != null) ? playerProfile.getName() : "NONAME";
+        String name = (playerName != null) ? playerName : "NONAME";
 
-        File output = new File(folderToRecordTo.getParentFile() + "/" + (useUsernameForRecordings ? name : playerProfile.getId().toString()) + "/" + fileName);
+        File output = new File(folderToRecordTo.getParentFile() + "/" + (useUsernameForRecordings ? name : playerId.toString()) + "/" + fileName);
         ArrayList<File> filesToCompress = new ArrayList<>() {{
             add(new File(folderToRecordTo + "/metaData.json"));
             add(new File(folderToRecordTo + "/recording.tmcpr"));
@@ -122,7 +124,9 @@ public class PlayerThreadRecorder {
         } else if (packet instanceof LoginSuccessS2CPacket loginSuccessS2CPacket) {
             state = NetworkState.PLAY; //We are now dealing with "playing" packets, so set the network state accordingly.
             //Also, set the profile for use in fixing.
-            playerProfile = ((LoginSuccessfulS2CPacketAccessor) loginSuccessS2CPacket).getProfile();
+            GameProfile profile = ((LoginSuccessfulS2CPacketAccessor) loginSuccessS2CPacket).getProfile();
+            playerId = profile.getId();
+            playerName = profile.getName();
         } else if (packet instanceof PlayerSpawnS2CPacket packet1) {
             uuids.add(String.valueOf(packet1.getPlayerUuid()));
         }
@@ -196,7 +200,7 @@ public class PlayerThreadRecorder {
 
     public void spawnRecordingPlayer() {
         try {
-            ServerPlayerEntity player = ms.getPlayerManager().getPlayer(playerProfile.getId());
+            ServerPlayerEntity player = ms.getPlayerManager().getPlayer(playerId);
             if(player == null) return;
             save(new PlayerSpawnS2CPacket(player));
             save(new EntityTrackerUpdateS2CPacket(player.getId(), player.getDataTracker(), true));
@@ -215,7 +219,8 @@ public class PlayerThreadRecorder {
             //Update player position.
             Packet packet;
 
-            ServerPlayerEntity player = ms.getPlayerManager().getPlayer(playerProfile.getId());
+            ServerPlayerEntity player = ms.getPlayerManager().getPlayer(playerId);
+            if(player == null) return;
 
             boolean force = false;
 
@@ -330,8 +335,8 @@ public class PlayerThreadRecorder {
     }
 
     public void onBlockBreakAnim(int breakerId, BlockPos pos, int progress) {
-        if (playerProfile == null) return;
-        PlayerEntity thePlayer = ms.getPlayerManager().getPlayer(playerProfile.getId());
+        if (playerId == null) return;
+        PlayerEntity thePlayer = ms.getPlayerManager().getPlayer(playerId);
         if (thePlayer != null && breakerId == thePlayer.getId()) {
             save(new BlockBreakingProgressS2CPacket(breakerId, pos, progress));
         }

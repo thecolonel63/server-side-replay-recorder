@@ -20,7 +20,7 @@ public class PlayerManagerMixin {
     @Inject(method = "respawnPlayer", at = @At("HEAD"))
     private void setRespawning(ServerPlayerEntity player, boolean alive, CallbackInfoReturnable<ServerPlayerEntity> cir) {
         ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap.forEach(((connection, playerThreadRecorder) -> {
-            if (player != null && playerThreadRecorder.playerProfile.getId().equals(player.getUuid())) {
+            if (player != null && playerThreadRecorder.playerId.equals(player.getUuid())) {
                 playerThreadRecorder.isRespawning = true;
             }
         }));
@@ -29,7 +29,7 @@ public class PlayerManagerMixin {
     @Inject(method = "respawnPlayer", at = @At("TAIL"))
     private void respawnPlayer(ServerPlayerEntity player, boolean alive, CallbackInfoReturnable<ServerPlayerEntity> cir) {
         ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap.forEach((connection, playerThreadRecorder) -> {
-            if (player != null && playerThreadRecorder.playerProfile.getId().equals(player.getUuid())) {
+            if (player != null && playerThreadRecorder.playerId.equals(player.getUuid())) {
                 playerThreadRecorder.spawnRecordingPlayer();
                 playerThreadRecorder.isRespawning = false;
             }

@@ -18,7 +18,7 @@ public class ServerWorldMixin {
     @Inject(method = "playSound", at = @At("HEAD"))
     private void recordPlaySound(PlayerEntity except, double x, double y, double z, SoundEvent sound, SoundCategory category, float volume, float pitch, CallbackInfo ci) {
         ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap.forEach((connection, playerThreadRecorder) -> {
-            if (playerThreadRecorder.playerProfile != null) {
+            if (playerThreadRecorder.playerId != null) {
                 playerThreadRecorder.onClientSound(sound, category, x, y, z, volume, pitch);
             }
         });
@@ -28,7 +28,7 @@ public class ServerWorldMixin {
     @Inject(method = "syncWorldEvent", at = @At("HEAD"))
     private void playLevelEvent(PlayerEntity player, int eventId, BlockPos pos, int data, CallbackInfo ci) {
         ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap.forEach(((connection, playerThreadRecorder) -> {
-            if (player != null && playerThreadRecorder.playerProfile != null && playerThreadRecorder.playerProfile.getId() == player.getUuid()) {
+            if (player != null && playerThreadRecorder.playerId != null && playerThreadRecorder.playerId == player.getUuid()) {
                 playerThreadRecorder.onClientEffect(eventId, pos, data);
             }
         }));
