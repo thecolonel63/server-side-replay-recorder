@@ -5,7 +5,11 @@
   "name": "Server Side Replay Recorder",
   "description": "Records all client connections at once to the format that ReplayMod uses. Shouldn't require too many fixes between versions.",
   "authors": ["thecolonel63"],
-  "contact": {},
+  "contact": {
+    "homepage": "https://github.com/thecolonel63/server-side-replay-recorder",
+    "issues": "https://github.com/thecolonel63/server-side-replay-recorder/issues",
+    "sources": "https://github.com/thecolonel63/server-side-replay-recorder"
+  },
   "license": "MIT",
   "environment": "server",
   "entrypoints": {
