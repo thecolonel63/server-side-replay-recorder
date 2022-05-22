@@ -11,7 +11,6 @@ import net.minecraft.MinecraftVersion;
 import net.minecraft.SharedConstants;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.data.DataTracker;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.*;
@@ -31,16 +30,14 @@ import java.nio.ByteOrder;
 import java.nio.file.Paths;
 import java.util.*;
 
-import static com.thecolonel63.serversidereplayrecorder.server.ServerSideReplayRecorderServer.*;
-
 public class PlayerThreadRecorder {
 
     public final ClientConnection connection;
     public final MinecraftServer ms = ServerSideReplayRecorderServer.server;
     private final File folderToRecordTo;
-//    public GameProfile playerProfile;
     public UUID playerId;
     public String playerName;
+    public boolean isRespawning;
     private long start;
     private NetworkState state = NetworkState.LOGIN;
     private BufferedOutputStream bos;
@@ -55,10 +52,9 @@ public class PlayerThreadRecorder {
     private int lastRiding = -1;
     private boolean wasSleeping;
     private JsonArray uuids = new JsonArray();
-    public boolean isRespawning;
 
     public PlayerThreadRecorder(ClientConnection connection) throws IOException {
-        folderToRecordTo = new File(Paths.get("").toAbsolutePath() + "/"+replayFolderName+"/recording_" + this.hashCode());
+        folderToRecordTo = new File(Paths.get("").toAbsolutePath() + "/" + ServerSideReplayRecorderServer.replayFolderName + "/recording_" + this.hashCode());
         folderToRecordTo.mkdirs();
         fos = new FileOutputStream(folderToRecordTo + "/recording.tmcpr", true);
         bos = new BufferedOutputStream(fos);
@@ -97,7 +93,7 @@ public class PlayerThreadRecorder {
         String fileName = cal.get(Calendar.YEAR) + "_" + String.format("%02d", (cal.get(Calendar.MONTH) + 1)) + "_" + String.format("%02d", (cal.get(Calendar.DAY_OF_MONTH))) + "_" + String.format("%02d", (cal.get(Calendar.HOUR_OF_DAY))) + "_" + String.format("%02d", (cal.get(Calendar.MINUTE))) + "_" + String.format("%02d", (cal.get(Calendar.SECOND))) + ".mcpr";
         String name = (playerName != null) ? playerName : "NONAME";
 
-        File output = new File(folderToRecordTo.getParentFile() + "/" + (useUsernameForRecordings ? name : playerId.toString()) + "/" + fileName);
+        File output = new File(folderToRecordTo.getParentFile() + "/" + (ServerSideReplayRecorderServer.useUsernameForRecordings ? name : playerId.toString()) + "/" + fileName);
         ArrayList<File> filesToCompress = new ArrayList<>() {{
             add(new File(folderToRecordTo + "/metaData.json"));
             add(new File(folderToRecordTo + "/recording.tmcpr"));
@@ -142,7 +138,7 @@ public class PlayerThreadRecorder {
             bos.close();
             fos.close();
             Thread savingThread = new Thread(() -> {
-                writeMetaData(serverName);
+                writeMetaData(ServerSideReplayRecorderServer.serverName);
             });
             savingThread.start();
         } catch (IOException e) {
@@ -201,7 +197,7 @@ public class PlayerThreadRecorder {
     public void spawnRecordingPlayer() {
         try {
             ServerPlayerEntity player = ms.getPlayerManager().getPlayer(playerId);
-            if(player == null) return;
+            if (player == null) return;
             save(new PlayerSpawnS2CPacket(player));
             save(new EntityTrackerUpdateS2CPacket(player.getId(), player.getDataTracker(), true));
             playerSpawned = true;
@@ -220,7 +216,7 @@ public class PlayerThreadRecorder {
             Packet packet;
 
             ServerPlayerEntity player = ms.getPlayerManager().getPlayer(playerId);
-            if(player == null) return;
+            if (player == null) return;
 
             boolean force = false;
 
