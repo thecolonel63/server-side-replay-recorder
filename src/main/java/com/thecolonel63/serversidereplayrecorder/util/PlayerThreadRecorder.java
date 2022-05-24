@@ -40,19 +40,20 @@ public class PlayerThreadRecorder {
     public boolean isRespawning;
     private long start;
     private NetworkState state = NetworkState.LOGIN;
-    private BufferedOutputStream bos;
-    private FileOutputStream fos;
+    private final BufferedOutputStream bos;
+    private final FileOutputStream fos;
     private int timestamp;
     private boolean startedRecording = false;
     private boolean playerSpawned = false;
     private Double lastX, lastY, lastZ;
     private int ticksSinceLastCorrection;
     private Integer rotationYawHeadBefore;
-    private ItemStack[] playerItems = new ItemStack[6];
+    private final ItemStack[] playerItems = new ItemStack[6];
     private int lastRiding = -1;
     private boolean wasSleeping;
-    private JsonArray uuids = new JsonArray();
+    private final JsonArray uuids = new JsonArray();
 
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public PlayerThreadRecorder(ClientConnection connection) throws IOException {
         folderToRecordTo = new File(Paths.get("").toAbsolutePath() + "/" + ServerSideReplayRecorderServer.replayFolderName + "/recording_" + this.hashCode());
         folderToRecordTo.mkdirs();
@@ -87,6 +88,7 @@ public class PlayerThreadRecorder {
         }
     }
 
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     private void compressReplay() {
         Calendar cal = Calendar.getInstance();
         cal.setTimeInMillis(start);
@@ -137,9 +139,7 @@ public class PlayerThreadRecorder {
         try {
             bos.close();
             fos.close();
-            Thread savingThread = new Thread(() -> {
-                writeMetaData(ServerSideReplayRecorderServer.serverName);
-            });
+            Thread savingThread = new Thread(() -> writeMetaData(ServerSideReplayRecorderServer.serverName));
             savingThread.start();
         } catch (IOException e) {
             e.printStackTrace();
@@ -213,7 +213,7 @@ public class PlayerThreadRecorder {
             if (!playerSpawned) return; //We can't update what the player is *doing* if they don't exist...
 
             //Update player position.
-            Packet packet;
+            Packet<?> packet;
 
             ServerPlayerEntity player = ms.getPlayerManager().getPlayer(playerId);
             if (player == null) return;
@@ -279,7 +279,7 @@ public class PlayerThreadRecorder {
                 ItemStack stack = player.getEquippedStack(slot);
                 if (playerItems[slot.ordinal()] != stack) {
                     playerItems[slot.ordinal()] = stack;
-                    equipment.add(new Pair<EquipmentSlot, ItemStack>(slot, stack));
+                    equipment.add(new Pair<>(slot, stack));
                     needsToUpdate = true;
                 }
                 if (needsToUpdate) {
