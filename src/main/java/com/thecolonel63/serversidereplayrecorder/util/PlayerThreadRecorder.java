@@ -125,9 +125,9 @@ public class PlayerThreadRecorder {
             GameProfile profile = ((LoginSuccessfulS2CPacketAccessor) loginSuccessS2CPacket).getProfile();
             playerId = profile.getId();
             playerName = profile.getName();
-        } else if (packet instanceof PlayerSpawnS2CPacket packet1) {
-            uuids.add(String.valueOf(packet1.getPlayerUuid()));
-        }
+        }/* else if (packet instanceof PlayerSpawnS2CPacket packet1) {
+            uuids.add(String.valueOf(packet1.getPlayerUuid())); //Broken, seems to be unused by the regular replay client.
+        }*/
 
         timestamp = (int) (System.currentTimeMillis() - start);
         save(packet);
