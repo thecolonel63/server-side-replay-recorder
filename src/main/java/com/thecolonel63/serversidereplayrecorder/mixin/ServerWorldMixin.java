@@ -16,10 +16,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class ServerWorldMixin {
     //Sounds
     @Inject(method = "playSound", at = @At("HEAD"))
-    private void recordPlaySound(PlayerEntity except, double x, double y, double z, SoundEvent sound, SoundCategory category, float volume, float pitch, CallbackInfo ci) {
+    private void recordPlaySound(PlayerEntity except, double x, double y, double z, SoundEvent sound, SoundCategory category, float volume, float pitch, long seed, CallbackInfo ci) {
         ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap.forEach((connection, playerThreadRecorder) -> {
             if (playerThreadRecorder.playerId != null) {
-                playerThreadRecorder.onClientSound(sound, category, x, y, z, volume, pitch);
+                playerThreadRecorder.onClientSound(sound, category, x, y, z, volume, pitch, seed);
             }
         });
     }

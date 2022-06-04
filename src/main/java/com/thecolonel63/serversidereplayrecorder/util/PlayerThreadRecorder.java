@@ -312,10 +312,10 @@ public class PlayerThreadRecorder {
         }
     }
 
-    public void onClientSound(SoundEvent sound, SoundCategory category, double x, double y, double z, float volume, float pitch) {
+    public void onClientSound(SoundEvent sound, SoundCategory category, double x, double y, double z, float volume, float pitch, long seed) {
         try {
             // Send to all other players in ServerWorldEventHandler#playSoundToAllNearExcept
-            save(new PlaySoundS2CPacket(sound, category, x, y, z, volume, pitch));
+            save(new PlaySoundS2CPacket(sound, category, x, y, z, volume, pitch, seed));
         } catch (Exception e) {
             e.printStackTrace();
         }
