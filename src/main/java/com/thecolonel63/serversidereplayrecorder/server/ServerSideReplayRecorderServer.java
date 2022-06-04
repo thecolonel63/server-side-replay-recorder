@@ -4,8 +4,6 @@ import com.thecolonel63.serversidereplayrecorder.util.PlayerThreadRecorder;
 import net.fabricmc.api.DedicatedServerModInitializer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.server.MinecraftServer;
 
@@ -51,7 +49,7 @@ public class ServerSideReplayRecorderServer implements DedicatedServerModInitial
             });
         } catch (FileNotFoundException e) {
             System.out.println("Config file not found, creating with default values...");
-            saveConfig();
+            saveDefaultConfig();
         } catch (IOException ioException) {
             ioException.printStackTrace();
         }
@@ -111,10 +109,10 @@ public class ServerSideReplayRecorderServer implements DedicatedServerModInitial
         return false;
     }
 
-    private static void saveConfig() {
+    private static void saveDefaultConfig() {
         try {
-            new File(rootDirectory+"/config").mkdirs();
-            BufferedWriter writer = new BufferedWriter(new FileWriter(rootDirectory+"/config/ServerSideReplayRecorder.properties"));
+            new File(rootDirectory + "/config").mkdirs();
+            BufferedWriter writer = new BufferedWriter(new FileWriter(rootDirectory + "/config/ServerSideReplayRecorder.properties"));
             writer.write("#Config for Server Side Replay Recorder");
             writer.write("\n#replay_folder_name - Folder replays are all saved to.");
             writer.write("\n#use_username_for_recordings - If false, UUIDs will be used to group replays instead.");
@@ -122,30 +120,32 @@ public class ServerSideReplayRecorderServer implements DedicatedServerModInitial
             writer.write("\n\n");
             configOptions.forEach((property, value) -> {
                 try {
-                    writer.write(property+"="+value+"\n");
+                    writer.write(property + "=" + value + "\n");
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             });
             writer.close();
+            loadConfig();
         } catch (IOException ioException) {
             ioException.printStackTrace();
         }
     }
 
+    public static void init(MinecraftServer mcServer) {
+        server = mcServer;
+        loadConfig();
+    }
+
+    public static void tick() {
+        connectionPlayerThreadRecorderMap.forEach((connection, playerThreadRecorder) -> {
+            //Initiate the saving process of what isn't automatically saved.
+            playerThreadRecorder.onPlayerTick();
+        });
+    }
+
     @Override
     public void onInitializeServer() {
-        ServerLifecycleEvents.SERVER_STARTING.register(server1 -> {
-            server = server1;
-            loadConfig();
-        });
-
-        ServerTickEvents.START_SERVER_TICK.register(server1 -> {
-            connectionPlayerThreadRecorderMap.forEach((connection, playerThreadRecorder) -> {
-                //Initiate the saving process of what isn't automatically saved.
-                playerThreadRecorder.onPlayerTick();
-            });
-        });
 
     }
 
