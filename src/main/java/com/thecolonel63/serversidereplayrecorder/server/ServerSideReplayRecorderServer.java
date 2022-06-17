@@ -1,6 +1,7 @@
 package com.thecolonel63.serversidereplayrecorder.server;
 
 import com.thecolonel63.serversidereplayrecorder.util.PlayerThreadRecorder;
+import com.thecolonel63.serversidereplayrecorder.util.StoppedReplayFixer;
 import net.fabricmc.api.DedicatedServerModInitializer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -9,9 +10,7 @@ import net.minecraft.server.MinecraftServer;
 
 import java.io.*;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 
 @Environment(EnvType.SERVER)
 public class ServerSideReplayRecorderServer implements DedicatedServerModInitializer {
@@ -132,9 +131,48 @@ public class ServerSideReplayRecorderServer implements DedicatedServerModInitial
         }
     }
 
+    private static void fixStoppedReplays() {
+
+        System.out.println("Scanning for and fixing incomplete replays...");
+
+        if(new File(rootDirectory+"/"+replayFolderName).listFiles() == null) return;
+        ArrayList<File> replaysToFixWithMetadata = new ArrayList<>();
+        ArrayList<File> replaysToFix = new ArrayList<>();
+        for(File file : Objects.requireNonNull(new File(rootDirectory + "/" + replayFolderName).listFiles())) {
+            if(file.isDirectory()) {
+                if(file.listFiles() == null) continue;
+                for(File file1 : Objects.requireNonNull(file.listFiles())) {
+                    if(file1.getName().equals("recording.tmcpr") && !replaysToFixWithMetadata.contains(file)) replaysToFix.add(file);
+                    if(file1.getName().equals("metaData.json")) {
+                        replaysToFix.remove(file);
+                        replaysToFixWithMetadata.add(file);
+                    }
+                }
+            }
+        }
+
+        replaysToFixWithMetadata.forEach(file -> {
+            try {
+                StoppedReplayFixer.fixReplay(file, true);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+
+        replaysToFix.forEach(file -> {
+            try {
+                StoppedReplayFixer.fixReplay(file, false);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
+
+    }
+
     public static void init(MinecraftServer mcServer) {
         server = mcServer;
         loadConfig();
+        fixStoppedReplays();
     }
 
     public static void tick() {

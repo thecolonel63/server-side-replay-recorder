@@ -35,23 +35,23 @@ public class PlayerThreadRecorder {
     public final ClientConnection connection;
     public final MinecraftServer ms = ServerSideReplayRecorderServer.server;
     private final File folderToRecordTo;
+    private final BufferedOutputStream bos;
+    private final FileOutputStream fos;
+    private final ItemStack[] playerItems = new ItemStack[6];
+    private final JsonArray uuids = new JsonArray();
     public UUID playerId;
     public String playerName;
     public boolean isRespawning;
     private long start;
     private NetworkState state = NetworkState.LOGIN;
-    private final BufferedOutputStream bos;
-    private final FileOutputStream fos;
     private int timestamp;
     private boolean startedRecording = false;
     private boolean playerSpawned = false;
     private Double lastX, lastY, lastZ;
     private int ticksSinceLastCorrection;
     private Integer rotationYawHeadBefore;
-    private final ItemStack[] playerItems = new ItemStack[6];
     private int lastRiding = -1;
     private boolean wasSleeping;
-    private final JsonArray uuids = new JsonArray();
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     public PlayerThreadRecorder(ClientConnection connection) throws IOException {
@@ -62,7 +62,7 @@ public class PlayerThreadRecorder {
         this.connection = connection;
     }
 
-    private void writeMetaData(String serverName) {
+    private void writeMetaData(String serverName, boolean isFinishing) {
         try {
             JsonObject object = new JsonObject();
             object.addProperty("singleplayer", false);
@@ -77,12 +77,12 @@ public class PlayerThreadRecorder {
             object.addProperty("generator", "thecolonel63's Server Side Replay Recorder");
             object.addProperty("selfId", -1);
             object.add("players", uuids);
-            FileWriter fw = new FileWriter(folderToRecordTo + "/metaData.json", true);
+            FileWriter fw = new FileWriter(folderToRecordTo + "/metaData.json", false);
             BufferedWriter bw = new BufferedWriter(fw);
             bw.write(object.toString());
             bw.close();
             fw.close();
-            compressReplay();
+            if (isFinishing) compressReplay();
         } catch (IOException ioException) {
             ioException.printStackTrace();
         }
@@ -139,7 +139,7 @@ public class PlayerThreadRecorder {
         try {
             bos.close();
             fos.close();
-            Thread savingThread = new Thread(() -> writeMetaData(ServerSideReplayRecorderServer.serverName));
+            Thread savingThread = new Thread(() -> writeMetaData(ServerSideReplayRecorderServer.serverName, true));
             savingThread.start();
         } catch (IOException e) {
             e.printStackTrace();
@@ -180,6 +180,8 @@ public class PlayerThreadRecorder {
                 //Catches a dimension change that isn't technically a respawn, but should still be count as one.
                 spawnRecordingPlayer();
             }
+
+            writeMetaData(ServerSideReplayRecorderServer.serverName, false);
 
         } catch (IOException e) {
             e.printStackTrace();
