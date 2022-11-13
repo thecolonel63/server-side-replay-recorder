@@ -22,11 +22,13 @@ public class ServerLoginNetworkHandlerMixin {
 
     @Inject(method = "onKey", at = @At("TAIL"))
     private void startRecording(LoginKeyC2SPacket packet, CallbackInfo ci) {
-        //Try to start the recording
-        try {
-            ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap.put(this.connection, new PlayerThreadRecorder(this.connection));
-        } catch (IOException e) {
-            e.printStackTrace();
+        synchronized (ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap) {
+            //Try to start the recording
+            try {
+                ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap.put(this.connection, new PlayerThreadRecorder(this.connection));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 }

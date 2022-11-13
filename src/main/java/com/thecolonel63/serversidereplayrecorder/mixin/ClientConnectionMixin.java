@@ -14,22 +14,25 @@ import static com.thecolonel63.serversidereplayrecorder.server.ServerSideReplayR
 public class ClientConnectionMixin {
     @Inject(method = "send(Lnet/minecraft/network/Packet;Lnet/minecraft/network/PacketCallbacks;)V", at = @At("TAIL"))
     private void sendPacketToClient(Packet<?> packet, PacketCallbacks callbacks, CallbackInfo ci) {
-
-        //Get the recorder instance dedicated to this connection and give it the packet to record.
-        //If there is no recorder instance for this connection, don't do anything.
-        if (!connectionPlayerThreadRecorderMap.containsKey((ClientConnection) (Object) this)) {
-            return;
+        synchronized (connectionPlayerThreadRecorderMap) {
+            //Get the recorder instance dedicated to this connection and give it the packet to record.
+            //If there is no recorder instance for this connection, don't do anything.
+            if (!connectionPlayerThreadRecorderMap.containsKey((ClientConnection) (Object) this)) {
+                return;
+            }
+            connectionPlayerThreadRecorderMap.get((ClientConnection) (Object) this).onPacket(packet);
         }
-        connectionPlayerThreadRecorderMap.get((ClientConnection) (Object) this).onPacket(packet);
     }
 
     @Inject(method = "handleDisconnection", at = @At("HEAD"))
     private void handleDisconnectionOfRecorder(CallbackInfo ci) {
-        //Tell the recorder to handle a disconnect, if there *is* a recorder.
-        if (!connectionPlayerThreadRecorderMap.containsKey((ClientConnection) (Object) this)) {
-            return;
+        synchronized (connectionPlayerThreadRecorderMap) {
+            //Tell the recorder to handle a disconnect, if there *is* a recorder.
+            if (!connectionPlayerThreadRecorderMap.containsKey((ClientConnection) (Object) this)) {
+                return;
+            }
+            connectionPlayerThreadRecorderMap.get((ClientConnection) (Object) this).handleDisconnect();
         }
-        connectionPlayerThreadRecorderMap.get((ClientConnection) (Object) this).handleDisconnect();
     }
 
 }

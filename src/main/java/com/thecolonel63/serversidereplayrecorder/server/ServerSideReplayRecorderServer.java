@@ -11,13 +11,14 @@ import net.minecraft.server.MinecraftServer;
 import java.io.*;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Environment(EnvType.SERVER)
 public class ServerSideReplayRecorderServer implements DedicatedServerModInitializer {
     public static final String rootDirectory = Paths.get("").toAbsolutePath().toString();
     public static final Character[] INVALID_CHARACTERS = {'"', '*', ':', '<', '>', '?', '\\', '|', 0x7F, '\000'};
+    public static final Map<ClientConnection, PlayerThreadRecorder> connectionPlayerThreadRecorderMap = new ConcurrentHashMap<>();
     public static MinecraftServer server;
-    public static Map<ClientConnection, PlayerThreadRecorder> connectionPlayerThreadRecorderMap = new LinkedHashMap<>();
     public static String replayFolderName;
     public static boolean useUsernameForRecordings;
     public static String serverName;
@@ -135,15 +136,16 @@ public class ServerSideReplayRecorderServer implements DedicatedServerModInitial
 
         System.out.println("Scanning for and fixing incomplete replays...");
 
-        if(new File(rootDirectory+"/"+replayFolderName).listFiles() == null) return;
+        if (new File(rootDirectory + "/" + replayFolderName).listFiles() == null) return;
         ArrayList<File> replaysToFixWithMetadata = new ArrayList<>();
         ArrayList<File> replaysToFix = new ArrayList<>();
-        for(File file : Objects.requireNonNull(new File(rootDirectory + "/" + replayFolderName).listFiles())) {
-            if(file.isDirectory()) {
-                if(file.listFiles() == null) continue;
-                for(File file1 : Objects.requireNonNull(file.listFiles())) {
-                    if(file1.getName().equals("recording.tmcpr") && !replaysToFixWithMetadata.contains(file)) replaysToFix.add(file);
-                    if(file1.getName().equals("metaData.json")) {
+        for (File file : Objects.requireNonNull(new File(rootDirectory + "/" + replayFolderName).listFiles())) {
+            if (file.isDirectory()) {
+                if (file.listFiles() == null) continue;
+                for (File file1 : Objects.requireNonNull(file.listFiles())) {
+                    if (file1.getName().equals("recording.tmcpr") && !replaysToFixWithMetadata.contains(file))
+                        replaysToFix.add(file);
+                    if (file1.getName().equals("metaData.json")) {
                         replaysToFix.remove(file);
                         replaysToFixWithMetadata.add(file);
                     }
@@ -176,10 +178,12 @@ public class ServerSideReplayRecorderServer implements DedicatedServerModInitial
     }
 
     public static void tick() {
-        connectionPlayerThreadRecorderMap.forEach((connection, playerThreadRecorder) -> {
-            //Initiate the saving process of what isn't automatically saved.
-            playerThreadRecorder.onPlayerTick();
-        });
+        synchronized (ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap) {
+            connectionPlayerThreadRecorderMap.forEach((connection, playerThreadRecorder) -> {
+                //Initiate the saving process of what isn't automatically saved.
+                playerThreadRecorder.onPlayerTick();
+            });
+        }
     }
 
     @Override

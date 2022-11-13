@@ -134,15 +134,17 @@ public class PlayerThreadRecorder {
     }
 
     public void handleDisconnect() {
-        //Player has disconnected, so remove our recorder from the map and close the output streams.
-        ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap.remove(this.connection);
-        try {
-            bos.close();
-            fos.close();
-            Thread savingThread = new Thread(() -> writeMetaData(ServerSideReplayRecorderServer.serverName, true));
-            savingThread.start();
-        } catch (IOException e) {
-            e.printStackTrace();
+        synchronized (ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap) {
+            //Player has disconnected, so remove our recorder from the map and close the output streams.
+            ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap.remove(this.connection);
+            try {
+                bos.close();
+                fos.close();
+                Thread savingThread = new Thread(() -> writeMetaData(ServerSideReplayRecorderServer.serverName, true));
+                savingThread.start();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 

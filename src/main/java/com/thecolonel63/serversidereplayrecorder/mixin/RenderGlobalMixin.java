@@ -15,8 +15,10 @@ public class RenderGlobalMixin {
 
     @Inject(method = "setBlockBreakingInfo", at = @At("TAIL"))
     private void saveBlockBreakingProgressPacket(int entityId, BlockPos pos, int progress, CallbackInfo ci) {
-        ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap.forEach((connection, playerThreadRecorder) -> {
-            playerThreadRecorder.onBlockBreakAnim(entityId, pos, progress);
-        });
+        synchronized (ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap) {
+            ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap.forEach((connection, playerThreadRecorder) -> {
+                playerThreadRecorder.onBlockBreakAnim(entityId, pos, progress);
+            });
+        }
     }
 }
