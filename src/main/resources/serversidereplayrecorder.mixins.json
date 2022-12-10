@@ -13,7 +13,6 @@
     "MinecraftServerMixin",
     "PlayerManagerMixin",
     "RenderGlobalMixin",
-    "ServerLoginNetworkHandlerMixin",
     "ServerWorldMixin"
   ],
   "injectors": {

@@ -13,9 +13,6 @@
   "license": "MIT",
   "environment": "server",
   "entrypoints": {
-    "main": [
-      "com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorder"
-    ],
     "server": [
       "com.thecolonel63.serversidereplayrecorder.server.ServerSideReplayRecorderServer"
     ]
