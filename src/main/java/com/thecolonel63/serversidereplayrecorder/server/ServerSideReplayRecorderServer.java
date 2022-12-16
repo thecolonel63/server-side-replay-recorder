@@ -2,7 +2,6 @@ package com.thecolonel63.serversidereplayrecorder.server;
 
 import com.thecolonel63.serversidereplayrecorder.util.PlayerThreadRecorder;
 import com.thecolonel63.serversidereplayrecorder.util.StoppedReplayFixer;
-import net.fabricmc.api.DedicatedServerModInitializer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.minecraft.network.ClientConnection;
@@ -14,7 +13,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Environment(EnvType.SERVER)
-public class ServerSideReplayRecorderServer implements DedicatedServerModInitializer {
+public class ServerSideReplayRecorderServer {
     public static final String rootDirectory = Paths.get("").toAbsolutePath().toString();
     public static final Character[] INVALID_CHARACTERS = {'"', '*', ':', '<', '>', '?', '\\', '|', 0x7F, '\000'};
     public static final Map<ClientConnection, PlayerThreadRecorder> connectionPlayerThreadRecorderMap = new ConcurrentHashMap<>();
@@ -67,50 +66,51 @@ public class ServerSideReplayRecorderServer implements DedicatedServerModInitial
             String property = line.split("=")[0];
             String value = line.split("=")[1];
             switch (property) {
-                case "replay_folder_name":
-                    if (!isValueValid(value, value_type.STRING)) {
+                case "replay_folder_name" -> {
+                    if (isValueInvalid(value, value_type.STRING)) {
                         System.out.println("Warning: Replay Folder Name contains invalid characters! Please avoid use of special characters.");
                         return;
                     } else {
                         configOptions.put("replay_folder_name", value);
-                        break;
                     }
-                case "use_username_for_recordings":
-                    if (!isValueValid(value, value_type.BOOLEAN)) {
+                }
+                case "use_username_for_recordings" -> {
+                    if (isValueInvalid(value, value_type.BOOLEAN)) {
                         System.out.println("Warning: use_username_for_recordings must either be true or false!");
                         return;
                     } else {
                         configOptions.put("use_username_for_recordings", value);
-                        break;
                     }
-                case "server_name":
-                    if (!isValueValid(value, value_type.STRING)) {
+                }
+                case "server_name" -> {
+                    if (isValueInvalid(value, value_type.STRING)) {
                         System.out.println("Warning: Server Name contains invalid characters! Please avoid use of special characters.");
                         return;
                     } else {
                         configOptions.put("server_name", value);
-                        break;
                     }
+                }
             }
         }
         configOptions.put(line.split("=")[0], line.split("=")[1]);
     }
 
-    private static boolean isValueValid(String value, value_type type) {
-        if (value == null || value.isEmpty() || value.length() > 255) return false;
+    private static boolean isValueInvalid(String value, value_type type) {
+        if (value == null || value.isEmpty() || value.length() > 255) return true;
         switch (type) {
             case BOOLEAN -> {
-                return (value.equalsIgnoreCase("true") || value.equalsIgnoreCase("false"));
+                return (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false"));
             }
             case STRING -> {
-                return Arrays.stream(INVALID_CHARACTERS).noneMatch(character -> value.contains(character.toString()));
+                return Arrays.stream(INVALID_CHARACTERS).anyMatch(character -> value.contains(character.toString()));
             }
         }
-        return false;
+        return true;
     }
 
     private static void saveDefaultConfig() {
         try {
+            //noinspection ResultOfMethodCallIgnored
             new File(rootDirectory + "/config").mkdirs();
             BufferedWriter writer = new BufferedWriter(new FileWriter(rootDirectory + "/config/ServerSideReplayRecorder.properties"));
             writer.write("#Config for Server Side Replay Recorder");
@@ -184,11 +184,6 @@ public class ServerSideReplayRecorderServer implements DedicatedServerModInitial
                 playerThreadRecorder.onPlayerTick();
             });
         }
-    }
-
-    @Override
-    public void onInitializeServer() {
-
     }
 
     private enum value_type {

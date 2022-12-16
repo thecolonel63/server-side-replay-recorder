@@ -13,15 +13,12 @@
   "license": "MIT",
   "environment": "server",
   "entrypoints": {
-    "server": [
-      "com.thecolonel63.serversidereplayrecorder.server.ServerSideReplayRecorderServer"
-    ]
   },
   "mixins": [
     "serversidereplayrecorder.mixins.json"
   ],
   "depends": {
-    "fabricloader": ">=0.14.10",
-    "minecraft": "1.19.2"
+    "fabricloader": "*",
+    "minecraft": "1.19.3"
   }
 }

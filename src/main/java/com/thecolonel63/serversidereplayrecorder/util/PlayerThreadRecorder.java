@@ -17,6 +17,7 @@ import net.minecraft.network.*;
 import net.minecraft.network.packet.s2c.login.LoginCompressionS2CPacket;
 import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;
 import net.minecraft.network.packet.s2c.play.*;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundCategory;
@@ -203,7 +204,7 @@ public class PlayerThreadRecorder {
             ServerPlayerEntity player = ms.getPlayerManager().getPlayer(playerId);
             if (player == null) return;
             save(new PlayerSpawnS2CPacket(player));
-            save(new EntityTrackerUpdateS2CPacket(player.getId(), player.getDataTracker(), true));
+            save(new EntityTrackerUpdateS2CPacket(player.getId(), player.getDataTracker().getChangedEntries()));
             playerSpawned = true;
             lastX = lastY = lastZ = null;
         } catch (Exception e) {
@@ -316,7 +317,7 @@ public class PlayerThreadRecorder {
         }
     }
 
-    public void onClientSound(SoundEvent sound, SoundCategory category, double x, double y, double z, float volume, float pitch, long seed) {
+    public void onClientSound(RegistryEntry<SoundEvent> sound, SoundCategory category, double x, double y, double z, float volume, float pitch, long seed) {
         try {
             // Send to all other players in ServerWorldEventHandler#playSoundToAllNearExcept
             save(new PlaySoundS2CPacket(sound, category, x, y, z, volume, pitch, seed));
