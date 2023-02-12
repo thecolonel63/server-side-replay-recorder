@@ -38,7 +38,7 @@ public abstract class PlayerManagerMixin {
     @Inject(method = "onPlayerConnect", at= @At("HEAD"))
     private void onConnect(ClientConnection connection, ServerPlayerEntity player, CallbackInfo ci){
         if (!connectionPlayerThreadRecorderMap.containsKey(connection)
-                && ServerSideReplayRecorderServer.config.getRecordable_users().contains(player.getGameProfile().getName())) {
+                && ServerSideReplayRecorderServer.config.getRecordable_users().contains(player.getGameProfile().getName()) && ServerSideReplayRecorderServer.config.go) {
             try {
                 LOGGER.info("Started Recording Player %s".formatted(player.getGameProfile().getName()));
 

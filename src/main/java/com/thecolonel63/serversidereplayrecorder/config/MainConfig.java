@@ -18,6 +18,7 @@ public class MainConfig {
     public boolean use_username_for_recordings = true;
     public String server_name = "My Server";
     public String[] recordable_users = new String[]{};
+    public boolean go = false;
 
     public String getReplay_folder_name() {
         return replay_folder_name;
