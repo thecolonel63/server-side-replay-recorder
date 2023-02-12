@@ -44,8 +44,8 @@ public class ServerSideReplayRecorderServer {
         }catch (FileNotFoundException e){
             System.out.println("Config file not found, creating with default values...");
             saveConfig();
-        }catch (Throwable ignored){
-            ignored.printStackTrace();
+        }catch (Throwable t){
+            throw new RuntimeException(t);
         }
     }
 
