@@ -19,7 +19,8 @@ public class MainConfig {
     public String server_name = "My Server";
     public String[] recordable_users = new String[]{};
     public boolean go = false;
-
+    public boolean getGo() {return go;}
+    public void setGo(boolean go) {this.go = go;}
     public String getReplay_folder_name() {
         return replay_folder_name;
     }
