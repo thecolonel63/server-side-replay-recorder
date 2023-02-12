@@ -18,7 +18,7 @@ public class StoppedReplayFixer {
 
     static int lastTimestamp = 0;
 
-    static String metaData = "{\"singleplayer\":false,\"serverName\":\""+ServerSideReplayRecorderServer.serverName+"\",\"customServerName\":\""+ServerSideReplayRecorderServer.serverName+"\",\"duration\":%DURATION%,\"date\":%DATE%,\"mcversion\":\""+MinecraftVersion.CURRENT.getName()+"\",\"fileFormat\":\"MCPR\",\"fileFormatVersion\":14,\"protocol\":"+ SharedConstants.getProtocolVersion()+",\"generator\":\"thecolonel63's Server Side Replay Recorder\",\"selfId\":-1,\"players\":[]}";
+    static String metaData = "{\"singleplayer\":false,\"serverName\":\""+ServerSideReplayRecorderServer.serverName+"\",\"customServerName\":\""+ServerSideReplayRecorderServer.serverName+"\",\"duration\":%DURATION%,\"date\":%DATE%,\"mcversion\":\""+MinecraftVersion.GAME_VERSION.getName()+"\",\"fileFormat\":\"MCPR\",\"fileFormatVersion\":14,\"protocol\":"+ SharedConstants.getProtocolVersion()+",\"generator\":\"thecolonel63's Server Side Replay Recorder\",\"selfId\":-1,\"players\":[]}";
     static String loginName = "NONAME";
     static UUID loginUuid = new UUID(0, 0);
     static boolean loggedIn = false;

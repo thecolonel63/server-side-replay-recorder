@@ -2,10 +2,12 @@ package com.thecolonel63.serversidereplayrecorder.mixin;
 
 import com.thecolonel63.serversidereplayrecorder.server.ServerSideReplayRecorderServer;
 import com.thecolonel63.serversidereplayrecorder.util.PlayerThreadRecorder;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.GenericFutureListener;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.Packet;
-import net.minecraft.network.PacketCallbacks;
 import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;
+import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -18,8 +20,8 @@ import static com.thecolonel63.serversidereplayrecorder.server.ServerSideReplayR
 @SuppressWarnings("DataFlowIssue")
 @Mixin(ClientConnection.class)
 public class ClientConnectionMixin {
-    @Inject(method = "send(Lnet/minecraft/network/Packet;Lnet/minecraft/network/PacketCallbacks;)V", at = @At("TAIL"))
-    private void sendPacketToClient(Packet<?> packet, PacketCallbacks callbacks, CallbackInfo ci) {
+    @Inject(method = "send(Lnet/minecraft/network/Packet;Lio/netty/util/concurrent/GenericFutureListener;)V", at = @At("TAIL"))
+    private void sendPacketToClient(Packet<?> packet, @Nullable GenericFutureListener<? extends Future<? super Void>> callback, CallbackInfo ci) {
         synchronized (connectionPlayerThreadRecorderMap) {
 
             //Try to start the recorder here to allow for running in offline mode.

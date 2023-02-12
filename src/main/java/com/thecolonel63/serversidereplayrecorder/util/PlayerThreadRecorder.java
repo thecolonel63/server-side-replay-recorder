@@ -17,7 +17,6 @@ import net.minecraft.network.*;
 import net.minecraft.network.packet.s2c.login.LoginCompressionS2CPacket;
 import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;
 import net.minecraft.network.packet.s2c.play.*;
-import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundCategory;
@@ -71,7 +70,7 @@ public class PlayerThreadRecorder {
             object.addProperty("customServerName", serverName);
             object.addProperty("duration", timestamp);
             object.addProperty("date", start);
-            object.addProperty("mcversion", MinecraftVersion.CURRENT.getName());
+            object.addProperty("mcversion", MinecraftVersion.GAME_VERSION.getName());
             object.addProperty("fileFormat", "MCPR");
             object.addProperty("fileFormatVersion", 14); //Unlikely to change any time soon, last time this was updates was several major versions ago.
             object.addProperty("protocol", SharedConstants.getProtocolVersion());
@@ -204,7 +203,7 @@ public class PlayerThreadRecorder {
             ServerPlayerEntity player = ms.getPlayerManager().getPlayer(playerId);
             if (player == null) return;
             save(new PlayerSpawnS2CPacket(player));
-            save(new EntityTrackerUpdateS2CPacket(player.getId(), player.getDataTracker().getChangedEntries()));
+            save(new EntityTrackerUpdateS2CPacket(player.getId(), player.getDataTracker(), false));
             playerSpawned = true;
             lastX = lastY = lastZ = null;
         } catch (Exception e) {
@@ -317,10 +316,10 @@ public class PlayerThreadRecorder {
         }
     }
 
-    public void onClientSound(RegistryEntry<SoundEvent> sound, SoundCategory category, double x, double y, double z, float volume, float pitch, long seed) {
+    public void onClientSound(SoundEvent sound, SoundCategory category, double x, double y, double z, float volume, float pitch) {
         try {
             // Send to all other players in ServerWorldEventHandler#playSoundToAllNearExcept
-            save(new PlaySoundS2CPacket(sound, category, x, y, z, volume, pitch, seed));
+            save(new PlaySoundS2CPacket(sound, category, x, y, z, volume, pitch));
         } catch (Exception e) {
             e.printStackTrace();
         }
