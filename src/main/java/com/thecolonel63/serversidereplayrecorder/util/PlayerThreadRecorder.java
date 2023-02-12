@@ -7,6 +7,7 @@ import com.mojang.datafixers.util.Pair;
 import com.thecolonel63.serversidereplayrecorder.mixin.LoginSuccessfulS2CPacketAccessor;
 import com.thecolonel63.serversidereplayrecorder.server.ServerSideReplayRecorderServer;
 import io.netty.buffer.Unpooled;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.MinecraftVersion;
 import net.minecraft.SharedConstants;
 import net.minecraft.entity.Entity;
@@ -27,7 +28,6 @@ import net.minecraft.util.math.BlockPos;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.file.Paths;
 import java.util.*;
 
 public class PlayerThreadRecorder {
@@ -55,7 +55,7 @@ public class PlayerThreadRecorder {
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     public PlayerThreadRecorder(ClientConnection connection) throws IOException {
-        folderToRecordTo = new File(Paths.get("").toAbsolutePath() + "/" + ServerSideReplayRecorderServer.replayFolderName + "/recording_" + this.hashCode());
+        folderToRecordTo = new File(FabricLoader.getInstance().getGameDir() + "/" + ServerSideReplayRecorderServer.config.getReplay_folder_name() + "/recording_" + this.hashCode());
         folderToRecordTo.mkdirs();
         fos = new FileOutputStream(folderToRecordTo + "/recording.tmcpr", true);
         bos = new BufferedOutputStream(fos);
@@ -95,7 +95,7 @@ public class PlayerThreadRecorder {
         String fileName = cal.get(Calendar.YEAR) + "_" + String.format("%02d", (cal.get(Calendar.MONTH) + 1)) + "_" + String.format("%02d", (cal.get(Calendar.DAY_OF_MONTH))) + "_" + String.format("%02d", (cal.get(Calendar.HOUR_OF_DAY))) + "_" + String.format("%02d", (cal.get(Calendar.MINUTE))) + "_" + String.format("%02d", (cal.get(Calendar.SECOND))) + ".mcpr";
         String name = (playerName != null) ? playerName : "NONAME";
 
-        File output = new File(folderToRecordTo.getParentFile() + "/" + (ServerSideReplayRecorderServer.useUsernameForRecordings ? name : playerId.toString()) + "/" + fileName);
+        File output = new File(folderToRecordTo.getParentFile() + "/" + (ServerSideReplayRecorderServer.config.use_username_for_recordings() ? name : playerId.toString()) + "/" + fileName);
         ArrayList<File> filesToCompress = new ArrayList<>() {{
             add(new File(folderToRecordTo + "/metaData.json"));
             add(new File(folderToRecordTo + "/recording.tmcpr"));
@@ -140,7 +140,7 @@ public class PlayerThreadRecorder {
             try {
                 bos.close();
                 fos.close();
-                Thread savingThread = new Thread(() -> writeMetaData(ServerSideReplayRecorderServer.serverName, true));
+                Thread savingThread = new Thread(() -> writeMetaData(ServerSideReplayRecorderServer.config.getServer_name(), true));
                 savingThread.start();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -183,7 +183,7 @@ public class PlayerThreadRecorder {
                 spawnRecordingPlayer();
             }
 
-            writeMetaData(ServerSideReplayRecorderServer.serverName, false);
+            writeMetaData(ServerSideReplayRecorderServer.config.getServer_name(), false);
 
         } catch (IOException e) {
             e.printStackTrace();
