@@ -2,9 +2,7 @@ package com.thecolonel63.serversidereplayrecorder.config;
 
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.lwjgl.system.CallbackI;
 
-import java.io.File;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -14,13 +12,20 @@ public class MainConfig {
     public MainConfig() {
     }
 
-    public String replay_folder_name = "replay_recordings";
-    public boolean use_username_for_recordings = true;
-    public String server_name = "My Server";
-    public String[] recordable_users = new String[]{};
-    public boolean go = false;
-    public boolean getGo() {return go;}
-    public void setGo(boolean go) {this.go = go;}
+    private String replay_folder_name = "replay_recordings";
+    private boolean use_username_for_recordings = true;
+    private String server_name = "My Server";
+    private Set<String> recordable_users = new HashSet<>();
+    private boolean recording_enabled = false;
+
+    public boolean isRecording_enabled() {
+        return recording_enabled;
+    }
+
+    public void setRecording_enabled(boolean recording_enabled) {
+        this.recording_enabled = recording_enabled;
+    }
+
     public String getReplay_folder_name() {
         return replay_folder_name;
     }

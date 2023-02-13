@@ -3,7 +3,6 @@ package com.thecolonel63.serversidereplayrecorder.mixin;
 import com.mojang.authlib.GameProfile;
 import com.thecolonel63.serversidereplayrecorder.server.ServerSideReplayRecorderServer;
 import com.thecolonel63.serversidereplayrecorder.util.PlayerThreadRecorder;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.MessageType;
 import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;
@@ -38,7 +37,7 @@ public abstract class PlayerManagerMixin {
     @Inject(method = "onPlayerConnect", at= @At("HEAD"))
     private void onConnect(ClientConnection connection, ServerPlayerEntity player, CallbackInfo ci){
         if (!connectionPlayerThreadRecorderMap.containsKey(connection)
-                && ServerSideReplayRecorderServer.config.getRecordable_users().contains(player.getGameProfile().getName()) && ServerSideReplayRecorderServer.config.go) {
+                && ServerSideReplayRecorderServer.config.getRecordable_users().contains(player.getGameProfile().getName()) && ServerSideReplayRecorderServer.config.isRecording_enabled()) {
             try {
                 LOGGER.info("Started Recording Player %s".formatted(player.getGameProfile().getName()));
 

@@ -9,7 +9,6 @@ import net.minecraft.server.PlayerManager;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.LiteralText;
-import net.minecraft.text.Text;
 
 import java.util.Collection;
 import java.util.List;
@@ -74,7 +73,7 @@ public class ReplayCommand {
                                                     AtomicInteger count = new AtomicInteger();
                                                     to_remove.forEach( n -> {
                                                         if (ServerSideReplayRecorderServer.config.getRecordable_users().remove(n)) {
-                                                            source.sendFeedback(new LiteralText("%s removed from replay list".formatted(n)), true);
+                                                            source.sendFeedback(new LiteralText("%s removed to replay list".formatted(n)), true);
                                                             count.getAndIncrement();
                                                         }
                                                     });
@@ -93,16 +92,17 @@ public class ReplayCommand {
                                                     return 0;
                                                 })
                                 )
-                ).then(CommandManager.literal("go")
-                        .then(CommandManager.literal("status").executes(context -> {
-                            context.getSource().sendFeedback(new LiteralText("Recording: " + ServerSideReplayRecorderServer.config.go), true);
-                            return 0;
-                        }))
-                        .then(CommandManager.literal("toggle")) .executes(context -> {
-                            ServerSideReplayRecorderServer.config.go = !ServerSideReplayRecorderServer.config.go;
-                            context.getSource().sendFeedback(new LiteralText("Recording: " + ServerSideReplayRecorderServer.config.go), true);
+                ).then(CommandManager.literal("status")
+                        .executes(context -> {
+                            context.getSource().sendFeedback(new LiteralText("Recording " + ((ServerSideReplayRecorderServer.config.isRecording_enabled())?"Enabled":"Disabled")), true);
                             return 0;
                         })
+                        .then(CommandManager.literal("toggle").executes(context -> {
+                            ServerSideReplayRecorderServer.config.setRecording_enabled(!ServerSideReplayRecorderServer.config.isRecording_enabled());
+                            context.getSource().sendFeedback(new LiteralText("Recording " + ((ServerSideReplayRecorderServer.config.isRecording_enabled())?"Enabled":"Disabled")), true);
+                            ServerSideReplayRecorderServer.saveConfig();
+                            return 0;
+                        }))
                 )
         );
     }
