@@ -47,10 +47,10 @@ public class MainConfig {
     }
 
     public void setRecordable_users(String[] recordable_users) {
-        this.recordable_users = recordable_users;
+        this.recordable_users = new HashSet<>(Arrays.asList(recordable_users));
     }
 
     public Set<String> getRecordable_users() {
-        return new HashSet<>(Arrays.asList(recordable_users));
+        return this.recordable_users;
     }
 }
