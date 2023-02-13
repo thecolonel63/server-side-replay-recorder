@@ -17,7 +17,7 @@ public class MainConfig {
     public String replay_folder_name = "replay_recordings";
     public boolean use_username_for_recordings = true;
     public String server_name = "My Server";
-    public String[] recordable_users = new String[]{};
+    public Set<String> recordable_users = new HashSet<>();
 
     public String getReplay_folder_name() {
         return replay_folder_name;
@@ -45,10 +45,10 @@ public class MainConfig {
     }
 
     public void setRecordable_users(String[] recordable_users) {
-        this.recordable_users = recordable_users;
+        this.recordable_users = new HashSet<>(Arrays.asList(recordable_users));
     }
 
     public Set<String> getRecordable_users() {
-        return new HashSet<>(Arrays.asList(recordable_users));
+        return this.recordable_users;
     }
 }
