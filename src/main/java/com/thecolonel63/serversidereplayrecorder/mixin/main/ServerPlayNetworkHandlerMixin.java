@@ -1,4 +1,4 @@
-package com.thecolonel63.serversidereplayrecorder.mixin;
+package com.thecolonel63.serversidereplayrecorder.mixin.main;
 
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import static com.thecolonel63.serversidereplayrecorder.server.ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap;
+import static com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap;
 
 @Mixin(ServerPlayNetworkHandler.class)
 public abstract class ServerPlayNetworkHandlerMixin {

@@ -1,11 +1,12 @@
-package com.thecolonel63.serversidereplayrecorder.util;
+package com.thecolonel63.serversidereplayrecorder.recorder;
 
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Pair;
-import com.thecolonel63.serversidereplayrecorder.mixin.LoginSuccessfulS2CPacketAccessor;
-import com.thecolonel63.serversidereplayrecorder.server.ServerSideReplayRecorderServer;
+import com.thecolonel63.serversidereplayrecorder.mixin.main.LoginSuccessfulS2CPacketAccessor;
+import com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer;
+import com.thecolonel63.serversidereplayrecorder.util.FileHandlingUtility;
 import io.netty.buffer.Unpooled;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.MinecraftVersion;
@@ -28,41 +29,45 @@ import net.minecraft.util.math.BlockPos;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.*;
 
-public class PlayerThreadRecorder {
+public class PlayerRecorder {
 
     public final ClientConnection connection;
     public final MinecraftServer ms = ServerSideReplayRecorderServer.server;
-    private final File folderToRecordTo;
-    private final BufferedOutputStream bos;
-    private final FileOutputStream fos;
-    private final ItemStack[] playerItems = new ItemStack[6];
-    private final JsonArray uuids = new JsonArray();
+    protected final File tmp_folder;
+    protected final BufferedOutputStream bos;
+    protected final FileOutputStream fos;
+    protected final ItemStack[] playerItems = new ItemStack[6];
+    protected final JsonArray uuids = new JsonArray();
     public UUID playerId;
     public String playerName;
     public boolean isRespawning;
-    private long start;
-    private NetworkState state = NetworkState.LOGIN;
-    private int timestamp;
-    private boolean startedRecording = false;
-    private boolean playerSpawned = false;
-    private Double lastX, lastY, lastZ;
-    private int ticksSinceLastCorrection;
-    private Integer rotationYawHeadBefore;
-    private int lastRiding = -1;
-    private boolean wasSleeping;
+    protected long start;
+    protected NetworkState state = NetworkState.LOGIN;
+    protected int timestamp;
+    protected boolean startedRecording = false;
+    protected boolean playerSpawned = false;
+    protected Double lastX, lastY, lastZ;
+    protected int ticksSinceLastCorrection;
+    protected Integer rotationYawHeadBefore;
+    protected int lastRiding = -1;
+    protected boolean wasSleeping;
+
+    protected boolean open = true;
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
-    public PlayerThreadRecorder(ClientConnection connection) throws IOException {
-        folderToRecordTo = new File(FabricLoader.getInstance().getGameDir() + "/" + ServerSideReplayRecorderServer.config.getReplay_folder_name() + "/recording_" + this.hashCode());
-        folderToRecordTo.mkdirs();
-        fos = new FileOutputStream(folderToRecordTo + "/recording.tmcpr", true);
+    public PlayerRecorder(ClientConnection connection) throws IOException {
+        tmp_folder = new File(FabricLoader.getInstance().getGameDir() + "/" + ServerSideReplayRecorderServer.config.getReplay_folder_name() + "/recording_" + this.hashCode());
+        tmp_folder.mkdirs();
+        fos = new FileOutputStream(tmp_folder + "/recording.tmcpr", true);
         bos = new BufferedOutputStream(fos);
         this.connection = connection;
     }
 
-    private void writeMetaData(String serverName, boolean isFinishing) {
+    protected void writeMetaData(String serverName, boolean isFinishing) {
         try {
             JsonObject object = new JsonObject();
             object.addProperty("singleplayer", false);
@@ -77,7 +82,7 @@ public class PlayerThreadRecorder {
             object.addProperty("generator", "thecolonel63's Server Side Replay Recorder");
             object.addProperty("selfId", -1);
             object.add("players", uuids);
-            FileWriter fw = new FileWriter(folderToRecordTo + "/metaData.json", false);
+            FileWriter fw = new FileWriter(tmp_folder + "/metaData.json", false);
             BufferedWriter bw = new BufferedWriter(fw);
             bw.write(object.toString());
             bw.close();
@@ -87,24 +92,29 @@ public class PlayerThreadRecorder {
             ioException.printStackTrace();
         }
     }
+    
+    protected String getSaveFolder(){
+        String name = (playerName != null) ? playerName : "NONAME";
+        return tmp_folder.getParentFile() + "/" + (ServerSideReplayRecorderServer.config.use_username_for_recordings() ? name : playerId.toString());
+    }
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
-    private void compressReplay() {
+    protected void compressReplay() {
         Calendar cal = Calendar.getInstance();
         cal.setTimeInMillis(start);
         String fileName = cal.get(Calendar.YEAR) + "_" + String.format("%02d", (cal.get(Calendar.MONTH) + 1)) + "_" + String.format("%02d", (cal.get(Calendar.DAY_OF_MONTH))) + "_" + String.format("%02d", (cal.get(Calendar.HOUR_OF_DAY))) + "_" + String.format("%02d", (cal.get(Calendar.MINUTE))) + "_" + String.format("%02d", (cal.get(Calendar.SECOND))) + ".mcpr";
-        String name = (playerName != null) ? playerName : "NONAME";
+        
 
-        File output = new File(folderToRecordTo.getParentFile() + "/" + (ServerSideReplayRecorderServer.config.use_username_for_recordings() ? name : playerId.toString()) + "/" + fileName);
+        File output = new File( this.getSaveFolder() + "/" + fileName);
         ArrayList<File> filesToCompress = new ArrayList<>() {{
-            add(new File(folderToRecordTo + "/metaData.json"));
-            add(new File(folderToRecordTo + "/recording.tmcpr"));
+            add(new File(tmp_folder + "/metaData.json"));
+            add(new File(tmp_folder + "/recording.tmcpr"));
         }};
 
         output.getParentFile().mkdirs();
 
         try {
-            FileHandlingUtility.zip(filesToCompress, output.getAbsolutePath(), true, folderToRecordTo);
+            FileHandlingUtility.zip(filesToCompress, output.getAbsolutePath(), true, tmp_folder);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -138,6 +148,7 @@ public class PlayerThreadRecorder {
             //Player has disconnected, so remove our recorder from the map and close the output streams.
             ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap.remove(this.connection);
             try {
+                this.open = false;
                 bos.close();
                 fos.close();
                 Thread savingThread = new Thread(() -> writeMetaData(ServerSideReplayRecorderServer.config.getServer_name(), true));
@@ -149,6 +160,9 @@ public class PlayerThreadRecorder {
     }
 
     public void save(Packet<?> packet) {
+        //shallow all packets if this recording is already closed
+        if (! this.open)
+            return;
         PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
         packet.write(buf);
         try {
@@ -190,7 +204,7 @@ public class PlayerThreadRecorder {
         }
     }
 
-    private byte[] intToByteArray(int input) {
+    protected byte[] intToByteArray(int input) {
         //Takes an int, gives back the int as a byte array.
         ByteBuffer x = ByteBuffer.allocate(4);
         x.order(ByteOrder.BIG_ENDIAN);
@@ -340,6 +354,12 @@ public class PlayerThreadRecorder {
         if (thePlayer != null && breakerId == thePlayer.getId()) {
             save(new BlockBreakingProgressS2CPacket(breakerId, pos, progress));
         }
+    }
+
+    private final LocalDateTime start_time = LocalDateTime.now();
+
+    public Duration getUptime(){
+        return Duration.between(start_time, LocalDateTime.now());
     }
 
 }

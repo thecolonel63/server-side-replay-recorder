@@ -1,6 +1,6 @@
 package com.thecolonel63.serversidereplayrecorder.util;
 
-import com.thecolonel63.serversidereplayrecorder.server.ServerSideReplayRecorderServer;
+import com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer;
 import net.minecraft.MinecraftVersion;
 import net.minecraft.SharedConstants;
 

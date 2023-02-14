@@ -1,4 +1,4 @@
-package com.thecolonel63.serversidereplayrecorder.mixin;
+package com.thecolonel63.serversidereplayrecorder.mixin.main;
 
 import com.mojang.authlib.GameProfile;
 import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;

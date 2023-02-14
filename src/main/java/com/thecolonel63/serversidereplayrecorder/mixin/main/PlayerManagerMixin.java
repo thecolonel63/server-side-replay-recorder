@@ -1,14 +1,15 @@
-package com.thecolonel63.serversidereplayrecorder.mixin;
+package com.thecolonel63.serversidereplayrecorder.mixin.main;
 
 import com.mojang.authlib.GameProfile;
-import com.thecolonel63.serversidereplayrecorder.server.ServerSideReplayRecorderServer;
-import com.thecolonel63.serversidereplayrecorder.util.PlayerThreadRecorder;
+import com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer;
+import com.thecolonel63.serversidereplayrecorder.recorder.PlayerRecorder;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.MessageType;
 import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.LiteralText;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.Util;
 import org.apache.logging.log4j.Logger;
 import org.spongepowered.asm.mixin.Final;
@@ -22,7 +23,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import java.io.IOException;
 import java.util.List;
 
-import static com.thecolonel63.serversidereplayrecorder.server.ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap;
+import static com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap;
 
 @Mixin(PlayerManager.class)
 public abstract class PlayerManagerMixin {
@@ -39,12 +40,12 @@ public abstract class PlayerManagerMixin {
         if (!connectionPlayerThreadRecorderMap.containsKey(connection)
                 && ServerSideReplayRecorderServer.config.getRecordable_users().contains(player.getGameProfile().getName()) && ServerSideReplayRecorderServer.config.isRecording_enabled()) {
             try {
-                LOGGER.info("Started Recording Player %s".formatted(player.getGameProfile().getName()));
+                ServerSideReplayRecorderServer.LOGGER.info("Started Recording Player %s".formatted(player.getGameProfile().getName()));
 
                 this.getPlayerList().stream().filter(p -> this.isOperator(p.getGameProfile())).forEach( p -> {
-                    p.sendMessage(new LiteralText("Started Recording Player %s".formatted(player.getGameProfile().getName())), MessageType.GAME_INFO, Util.NIL_UUID);
+                    p.sendMessage(new LiteralText("Started Recording Player %s".formatted(player.getGameProfile().getName())).formatted(Formatting.GOLD), MessageType.SYSTEM, Util.NIL_UUID);
                 });
-                PlayerThreadRecorder recorder = new PlayerThreadRecorder(connection);
+                PlayerRecorder recorder = new PlayerRecorder(connection);
                 ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap.put(connection, recorder);
                 recorder.onPacket(new LoginSuccessS2CPacket(player.getGameProfile()));
             } catch (IOException e) {

@@ -1,17 +1,20 @@
-package com.thecolonel63.serversidereplayrecorder.server;
+package com.thecolonel63.serversidereplayrecorder;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactoryBuilder;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 import com.thecolonel63.serversidereplayrecorder.config.MainConfig;
-import com.thecolonel63.serversidereplayrecorder.util.PlayerThreadRecorder;
+import com.thecolonel63.serversidereplayrecorder.recorder.PlayerRecorder;
+import com.thecolonel63.serversidereplayrecorder.recorder.RegionRecorder;
 import com.thecolonel63.serversidereplayrecorder.util.StoppedReplayFixer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.server.MinecraftServer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.*;
@@ -29,7 +32,13 @@ public class ServerSideReplayRecorderServer {
 
     private static final ObjectMapper yaml;
 
-    public static final Map<ClientConnection, PlayerThreadRecorder> connectionPlayerThreadRecorderMap = new ConcurrentHashMap<>();
+    public static final Logger LOGGER = LoggerFactory.getLogger(ServerSideReplayRecorderServer.class.getName());
+
+
+    //TODO: swap the maps with Apache Caches with either Soft or Weak keys and values to prevent memory leaks
+
+    public static final Map<ClientConnection, PlayerRecorder> connectionPlayerThreadRecorderMap = new ConcurrentHashMap<>();
+
     public static MinecraftServer server;
 
     public static final String configPath = FabricLoader.getInstance().getConfigDir() + "/ServerSideReplayRecorder.yml";
@@ -118,6 +127,9 @@ public class ServerSideReplayRecorderServer {
             connectionPlayerThreadRecorderMap.forEach((connection, playerThreadRecorder) -> {
                 //Initiate the saving process of what isn't automatically saved.
                 playerThreadRecorder.onPlayerTick();
+            });
+            RegionRecorder.recorders.forEach((s, recorder) -> {
+                recorder.onPlayerTick();
             });
         }
     }

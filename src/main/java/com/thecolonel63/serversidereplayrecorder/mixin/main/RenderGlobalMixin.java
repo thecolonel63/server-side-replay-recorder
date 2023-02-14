@@ -1,6 +1,6 @@
-package com.thecolonel63.serversidereplayrecorder.mixin;
+package com.thecolonel63.serversidereplayrecorder.mixin.main;
 
-import com.thecolonel63.serversidereplayrecorder.server.ServerSideReplayRecorderServer;
+import com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import org.spongepowered.asm.mixin.Mixin;

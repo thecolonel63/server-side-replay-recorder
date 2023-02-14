@@ -1,18 +1,19 @@
 package com.thecolonel63.serversidereplayrecorder.config;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.mojang.authlib.GameProfile;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
+import java.io.File;
+import java.util.*;
 
 public class MainConfig {
 
     public MainConfig() {
     }
 
-    private String replay_folder_name = "replay_recordings";
+    private File replay_folder_name = new File("replay_recordings");
     private boolean use_username_for_recordings = true;
     private String server_name = "My Server";
     private Set<String> recordable_users = new HashSet<>();
@@ -27,11 +28,11 @@ public class MainConfig {
     }
 
     public String getReplay_folder_name() {
-        return replay_folder_name;
+        return replay_folder_name.getName();
     }
 
     public void setReplay_folder_name(String replay_folder_name) {
-        this.replay_folder_name = replay_folder_name;
+        this.replay_folder_name = new File(replay_folder_name);
     }
 
     @JsonProperty(value = "use_username_for_recordings")
@@ -51,8 +52,8 @@ public class MainConfig {
         this.server_name = server_name;
     }
 
-    public void setRecordable_users(String[] recordable_users) {
-        this.recordable_users = new HashSet<>(Arrays.asList(recordable_users));
+    public void setRecordable_users(Set<String> recordable_users) {
+        this.recordable_users = recordable_users;
     }
 
     public Set<String> getRecordable_users() {

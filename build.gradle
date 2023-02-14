@@ -14,6 +14,10 @@ repositories {
     }
 }
 
+loom {
+    accessWidenerPath = file("src/main/resources/serverReplayMod.accesswidener")
+}
+
 configurations {
     provided
     // Make compile extend from our provided configuration so that things added to bundled end up on the compile classpath
