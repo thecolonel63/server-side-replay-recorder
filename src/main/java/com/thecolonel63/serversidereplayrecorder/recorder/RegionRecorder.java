@@ -25,6 +25,8 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.ChunkSectionPos;
+import net.minecraft.util.math.ColumnPos;
 import net.minecraft.util.registry.DynamicRegistryManager;
 import net.minecraft.world.GameMode;
 import net.minecraft.world.GameRules;
@@ -50,8 +52,6 @@ public class RegionRecorder extends PlayerRecorder {
         recorders.put(regionName, recorder);
         return recorder;
     }
-
-    public static final int FAKE_PLAYER_ID = Integer.MAX_VALUE - 5;
 
     public static final GameProfile FAKE_GAMEPROFILE = new GameProfile(PlayerEntity.getOfflinePlayerUuid("Camera"), "Camera");
 
@@ -152,11 +152,12 @@ public class RegionRecorder extends PlayerRecorder {
         }
 
         //set the replay viewpoint to the center of the watched region
-        onPacket(new PlayerPositionLookS2CPacket(this.fakePlayer.getX(), this.fakePlayer.getY(), fakePlayer.getZ(),0,0, Set.of(PlayerPositionLookS2CPacket.Flag.values()),0,false));
-        onPacket(new InventoryS2CPacket(0, 0, DefaultedList.ofSize(36, ItemStack.EMPTY), ItemStack.EMPTY));
+        onPacket(new PlayerPositionLookS2CPacket(this.fakePlayer.getX(), this.fakePlayer.getY(), fakePlayer.getZ(),0,0, Collections.emptySet(),0,false));
 
         //set the render center
         onPacket(new ChunkRenderDistanceCenterS2CPacket(this.region.center.x, this.region.center.z));
+
+        onPacket(new InventoryS2CPacket(0, 0, DefaultedList.ofSize(36, ItemStack.EMPTY), ItemStack.EMPTY));
 
         ServerChunkManager storage = world.getChunkManager();
         //load all watched chunks data
@@ -190,112 +191,6 @@ public class RegionRecorder extends PlayerRecorder {
             e.printStackTrace();
         }
     }
-
-/*
-    public void onPlayerTick() {
-        try {
-
-            if (!playerSpawned) return; //We can't update what the player is *doing* if they don't exist...
-
-            //Update player position.
-            Packet<?> packet;
-
-            PlayerEntity player = this.fakePlayer;
-
-            boolean force = false;
-
-            if (lastX == null || lastY == null || lastZ == null) {
-                force = true;
-                lastX = player.getX();
-                lastY = player.getY();
-                lastZ = player.getZ();
-            }
-
-            ticksSinceLastCorrection++;
-
-            if (ticksSinceLastCorrection >= 100) {
-                ticksSinceLastCorrection = 0;
-                force = true;
-            }
-
-            double dx = player.getX() - lastX;
-            double dy = player.getY() - lastY;
-            double dz = player.getZ() - lastZ;
-
-            lastX = player.getX();
-            lastY = player.getY();
-            lastZ = player.getZ();
-
-            final double maxRelDist = 8.0;
-
-            if (force || Math.abs(dx) > maxRelDist || Math.abs(dy) > maxRelDist || Math.abs(dz) > maxRelDist) {
-                packet = new EntityPositionS2CPacket(player);
-            } else {
-                byte newYaw = (byte) ((int) (player.getYaw() * 256.0F / 360.0F));
-                byte newPitch = (byte) ((int) (player.getPitch() * 256.0F / 360.0F));
-                packet = new EntityS2CPacket.RotateAndMoveRelative(player.getId(), (short) Math.round(dx * 4096), (short) Math.round(dy * 4096), (short) Math.round(dz * 4096), newYaw, newPitch, player.isOnGround());
-            }
-
-            save(packet);
-
-            //Update player rotation
-            int rotationYawHead = ((int) (player.headYaw * 256.0F / 360.0F));
-            if (!Objects.equals(rotationYawHead, rotationYawHeadBefore)) {
-                save(new EntitySetHeadYawS2CPacket(player, (byte) rotationYawHead));
-                rotationYawHeadBefore = rotationYawHead;
-            }
-
-            //Update player velocity
-            save(new EntityVelocityUpdateS2CPacket(player.getId(), player.getVelocity()));
-
-            //Update player hand swinging and other animations.
-            if (player.handSwinging && player.handSwingTicks == 0) {
-                save(new EntityAnimationS2CPacket(
-                        player, player.preferredHand == Hand.MAIN_HAND ? 0 : 3
-                ));
-            }
-
-            //Update player items
-            List<Pair<EquipmentSlot, ItemStack>> equipment = new ArrayList<>();
-            boolean needsToUpdate = false;
-
-            for (EquipmentSlot slot : EquipmentSlot.values()) {
-                ItemStack stack = player.getEquippedStack(slot);
-                if (playerItems[slot.ordinal()] != stack) {
-                    playerItems[slot.ordinal()] = stack;
-                    equipment.add(new Pair<>(slot, stack));
-                    needsToUpdate = true;
-                }
-                if (needsToUpdate) {
-                    save(new EntityEquipmentUpdateS2CPacket(player.getId(), equipment));
-                }
-            }
-
-            //Update player vehicle
-            Entity vehicle = player.getVehicle();
-            int vehicleId = vehicle == null ? -1 : vehicle.getId();
-            if (lastRiding != vehicleId) {
-                lastRiding = vehicleId;
-                save(new EntityAttachS2CPacket(
-                        //#if MC<10904
-                        //$$ 0,
-                        //#endif
-                        player,
-                        vehicle
-                ));
-            }
-
-            //Sleeping
-            if (!player.isSleeping() && wasSleeping) {
-                save(new EntityAnimationS2CPacket(player, 2));
-                wasSleeping = false;
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-*/
 
     @Override
     public void handleDisconnect() {

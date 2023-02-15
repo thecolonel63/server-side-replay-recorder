@@ -9,6 +9,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
+import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.play.ChunkDataS2CPacket;
 import net.minecraft.network.packet.s2c.play.LightUpdateS2CPacket;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -53,9 +54,9 @@ public abstract class ThreadAnvilChunkStorageMixin implements RegionRecorderStor
         ((RegionRecorderEntityTracker)entityTracker).updateTrackedStatus(((RegionRecorderWorld)this.world).getRegionRecorders());
     }
 
-    @Inject(method = "updatePosition", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/world/ThreadedAnvilChunkStorage$EntityTracker;updateTrackedStatus(Ljava/util/List;)V", ordinal = 0), locals = LocalCapture.CAPTURE_FAILHARD)
-    void handlePlayerMovement(ServerPlayerEntity player, CallbackInfo ci, ObjectIterator var2, ThreadedAnvilChunkStorage.EntityTracker entityTracker){
-        ((RegionRecorderEntityTracker)entityTracker).updateTrackedStatus(((RegionRecorderWorld)this.world).getRegionRecorders());
+    @Inject(method = "updatePosition", at = @At(value = "HEAD"))
+    void handlePlayerMovement(ServerPlayerEntity player, CallbackInfo ci){
+        ((RegionRecorderEntityTracker)this.entityTrackers.get(player.getId())).updateTrackedStatus(((RegionRecorderWorld)this.world).getRegionRecorders());
     }
 
     @Inject(method = "makeChunkTickable", at = @At(value = "INVOKE", target = "Ljava/util/concurrent/CompletableFuture;thenAcceptAsync(Ljava/util/function/Consumer;Ljava/util/concurrent/Executor;)Ljava/util/concurrent/CompletableFuture;"), locals = LocalCapture.CAPTURE_FAILHARD)
@@ -69,6 +70,7 @@ public abstract class ThreadAnvilChunkStorageMixin implements RegionRecorderStor
                 });
         }));
     }
+
 
     @Override
     public void registerRecorder(RegionRecorder recorder) {

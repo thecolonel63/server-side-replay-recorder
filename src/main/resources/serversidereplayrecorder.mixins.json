@@ -8,11 +8,13 @@
   "client": [
   ],
   "server": [
+    "commands.CommandManagerMixin",
     "experimental.region.ChunkHolderMixin",
     "experimental.region.EntityTrackerMixin",
     "experimental.region.ServerWorldMixin",
     "experimental.region.ThreadAnvilChunkStorageMixin",
-    "commands.CommandManagerMixin",
+    "experimental.region.PlayerManagerMixin",
+    "experimental.region.ServerPlayerInteractionManagerMixin",
     "main.LoginSuccessfulS2CPacketAccessor",
     "main.MinecraftServerMixin",
     "main.NetHandlerPlayServerFakeMixin",

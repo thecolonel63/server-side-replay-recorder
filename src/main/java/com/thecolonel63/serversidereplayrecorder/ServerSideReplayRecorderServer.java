@@ -128,9 +128,9 @@ public class ServerSideReplayRecorderServer {
                 //Initiate the saving process of what isn't automatically saved.
                 playerThreadRecorder.onPlayerTick();
             });
-            RegionRecorder.recorders.forEach((s, recorder) -> {
+            /*RegionRecorder.recorders.forEach((s, recorder) -> {
                 recorder.onPlayerTick();
-            });
+            });*/
         }
     }
 

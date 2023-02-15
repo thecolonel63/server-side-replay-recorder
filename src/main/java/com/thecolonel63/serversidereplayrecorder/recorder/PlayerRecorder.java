@@ -143,7 +143,7 @@ public class PlayerRecorder {
         save(packet);
     }
 
-    public void handleDisconnect() {
+    public synchronized void handleDisconnect() {
         synchronized (ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap) {
             //Player has disconnected, so remove our recorder from the map and close the output streams.
             ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap.remove(this.connection);
@@ -159,7 +159,7 @@ public class PlayerRecorder {
         }
     }
 
-    public void save(Packet<?> packet) {
+    public synchronized void save(Packet<?> packet) {
         //shallow all packets if this recording is already closed
         if (! this.open)
             return;
