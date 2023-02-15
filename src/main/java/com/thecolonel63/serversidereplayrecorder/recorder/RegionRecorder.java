@@ -1,32 +1,25 @@
 package com.thecolonel63.serversidereplayrecorder.recorder;
 
 import com.mojang.authlib.GameProfile;
-import com.mojang.datafixers.util.Pair;
+import com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer;
 import com.thecolonel63.serversidereplayrecorder.util.ChunkBox;
 import com.thecolonel63.serversidereplayrecorder.util.interfaces.RegionRecorderStorage;
 import com.thecolonel63.serversidereplayrecorder.util.interfaces.RegionRecorderWorld;
 import io.netty.buffer.Unpooled;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EquipmentSlot;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.entity.player.PlayerAbilities;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.NetworkSide;
-import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;
 import net.minecraft.network.packet.s2c.play.*;
-import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerChunkManager;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Hand;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
-import net.minecraft.util.math.ChunkSectionPos;
-import net.minecraft.util.math.ColumnPos;
 import net.minecraft.util.registry.DynamicRegistryManager;
 import net.minecraft.world.GameMode;
 import net.minecraft.world.GameRules;
@@ -34,10 +27,10 @@ import net.minecraft.world.WorldProperties;
 import net.minecraft.world.biome.source.BiomeAccess;
 import net.minecraft.world.border.WorldBorder;
 import net.minecraft.world.chunk.Chunk;
-import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.WorldChunk;
 
 import java.io.*;
+import java.nio.file.Paths;
 import java.util.*;
 
 public class RegionRecorder extends PlayerRecorder {
@@ -54,6 +47,8 @@ public class RegionRecorder extends PlayerRecorder {
     }
 
     public static final GameProfile FAKE_GAMEPROFILE = new GameProfile(PlayerEntity.getOfflinePlayerUuid("Camera"), "Camera");
+
+    public static String REGION_FOLDER = "region";
 
     public final String regionName;
 
@@ -157,6 +152,7 @@ public class RegionRecorder extends PlayerRecorder {
         //set the render center
         onPacket(new ChunkRenderDistanceCenterS2CPacket(this.region.center.x, this.region.center.z));
 
+        //close loading screen
         onPacket(new InventoryS2CPacket(0, 0, DefaultedList.ofSize(36, ItemStack.EMPTY), ItemStack.EMPTY));
 
         ServerChunkManager storage = world.getChunkManager();
@@ -172,12 +168,15 @@ public class RegionRecorder extends PlayerRecorder {
         //load all watched entities
         ((RegionRecorderStorage)world.getChunkManager().threadedAnvilChunkStorage).registerRecorder(this);
 
+        //repeat viewpoint packet
+        onPacket(new PlayerPositionLookS2CPacket(this.fakePlayer.getX(), this.fakePlayer.getY(), fakePlayer.getZ(),0,0, Collections.emptySet(),0,false));
+
     }
 
     @Override
     protected String getSaveFolder(){
         String name = (this.regionName != null) ? this.regionName : "NONAME";
-        return this.tmp_folder.getParentFile() + "/region " + name;
+        return Paths.get(FabricLoader.getInstance().getGameDir().toString(), ServerSideReplayRecorderServer.config.getReplay_folder_name(), REGION_FOLDER,name).toString();
     }
 
     @Override

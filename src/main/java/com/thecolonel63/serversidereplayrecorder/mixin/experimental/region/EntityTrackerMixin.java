@@ -42,12 +42,6 @@ public abstract class EntityTrackerMixin implements RegionRecorderEntityTracker 
         }
     }
 
-    @Override
-    public void updateTrackedStatus(Iterable<RegionRecorder> recorderIterable) {
-        for(RegionRecorder recorder : recorderIterable)
-            this.updateTrackedStatus(recorder);
-    }
-
     @Inject(method = "sendToOtherNearbyPlayers", at = @At("HEAD"))
     void sendToNearbyPlayers(Packet<?> packet, CallbackInfo ci){
         for (RegionRecorder recorder : this.listenening_recorders){

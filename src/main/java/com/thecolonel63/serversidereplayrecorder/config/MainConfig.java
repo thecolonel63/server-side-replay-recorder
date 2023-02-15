@@ -6,11 +6,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.mojang.authlib.GameProfile;
 
 import java.io.File;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.*;
 
 public class MainConfig {
 
     public MainConfig() {
+        try{
+            file_storage_url = new URL("https://tmpfiles.org/api/v1/upload");
+        }catch (Throwable ignored){}
     }
 
     private File replay_folder_name = new File("replay_recordings");
@@ -18,6 +23,16 @@ public class MainConfig {
     private String server_name = "My Server";
     private Set<String> recordable_users = new HashSet<>();
     private boolean recording_enabled = false;
+
+    private URL file_storage_url;
+
+    public URL getFile_storage_url() {
+        return file_storage_url;
+    }
+
+    public void setFile_storage_url(String file_storage_url) throws MalformedURLException {
+        this.file_storage_url = new URL(file_storage_url);
+    }
 
     public boolean isRecording_enabled() {
         return recording_enabled;

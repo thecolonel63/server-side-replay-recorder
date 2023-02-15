@@ -1,6 +1,17 @@
 package com.thecolonel63.serversidereplayrecorder.util;
 
+import com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer;
+
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.file.Files;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -74,5 +85,65 @@ public class FileHandlingUtility {
             }
         }
         file.delete();
+    }
+
+    public static String uploadToTemp(File file) throws IOException{
+        String attachmentName = "file";
+        String attachmentFileName = file.getName();
+        String crlf = "\r\n";
+        String twoHyphens = "--";
+        String boundary =  "123456";
+
+        HttpsURLConnection httpUrlConnection = null;
+        URL url = ServerSideReplayRecorderServer.config.getFile_storage_url();
+        httpUrlConnection = (HttpsURLConnection) url.openConnection();
+        httpUrlConnection.setUseCaches(false);
+        httpUrlConnection.setDoOutput(true);
+
+        httpUrlConnection.setRequestMethod("POST");
+        httpUrlConnection.setRequestProperty("Connection", "Keep-Alive");
+        httpUrlConnection.setRequestProperty("Cache-Control", "no-cache");
+        httpUrlConnection.setRequestProperty(
+                "Content-Type", "multipart/form-data;boundary=" + boundary);
+
+        DataOutputStream request = new DataOutputStream(
+                httpUrlConnection.getOutputStream());
+
+        request.writeBytes(twoHyphens + boundary + crlf);
+        request.writeBytes("Content-Disposition: form-data; name=\"" +
+                attachmentName + "\";filename=\"" +
+                attachmentFileName + "\"" + crlf);
+        request.writeBytes(crlf);
+
+        Files.copy(file.toPath(), request);
+
+        request.writeBytes(crlf);
+        request.writeBytes(twoHyphens + boundary +
+                twoHyphens + crlf);
+
+        request.flush();
+        request.close();
+
+        InputStream responseStream = new
+                BufferedInputStream(httpUrlConnection.getInputStream());
+
+        BufferedReader responseStreamReader =
+                new BufferedReader(new InputStreamReader(responseStream));
+
+        String line = "";
+        StringBuilder stringBuilder = new StringBuilder();
+
+        while ((line = responseStreamReader.readLine()) != null) {
+            stringBuilder.append(line).append("\n");
+        }
+        responseStreamReader.close();
+
+        String response = stringBuilder.toString();
+
+        responseStream.close();
+
+        httpUrlConnection.disconnect();
+
+        return response;
     }
 }

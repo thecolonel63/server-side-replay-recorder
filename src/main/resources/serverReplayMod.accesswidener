@@ -1,4 +1,3 @@
 accessWidener	v1	named
 accessible  class   net/minecraft/server/world/ThreadedAnvilChunkStorage$EntityTracker
-mutable field net/minecraft/network/packet/s2c/play/PlayerListS2CPacket entries Ljava/util/List;
 accessible  field net/minecraft/network/packet/s2c/play/PlayerListS2CPacket entries Ljava/util/List;

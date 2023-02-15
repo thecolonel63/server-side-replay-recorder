@@ -3,10 +3,13 @@ package com.thecolonel63.serversidereplayrecorder.command;
 import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.thecolonel63.serversidereplayrecorder.config.MainConfig;
 import com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer;
+import com.thecolonel63.serversidereplayrecorder.recorder.PlayerRecorder;
 import com.thecolonel63.serversidereplayrecorder.recorder.RegionRecorder;
 import com.thecolonel63.serversidereplayrecorder.util.ChunkBox;
+import com.thecolonel63.serversidereplayrecorder.util.FileHandlingUtility;
 import net.minecraft.command.CommandSource;
 import net.minecraft.command.argument.ColumnPosArgumentType;
 import net.minecraft.command.argument.GameProfileArgumentType;
@@ -14,14 +17,19 @@ import net.minecraft.server.PlayerManager;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.text.LiteralText;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.ColumnPos;
+import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 
+import java.io.File;
 import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 
@@ -52,12 +60,12 @@ public class ReplayCommand {
                                                     AtomicInteger count = new AtomicInteger();
                                                     to_add.forEach(n -> {
                                                         if (ServerSideReplayRecorderServer.config.getRecordable_users().add(n)) {
-                                                            source.sendFeedback(new LiteralText("%s added from replay list".formatted(n)), true);
+                                                            source.sendFeedback(new LiteralText("%s added from replay list".formatted(n)).formatted(Formatting.YELLOW), true);
                                                             count.getAndIncrement();
                                                         }
                                                     });
                                                     if (count.get() > 0) {
-                                                        source.sendFeedback(new LiteralText("Added Players will start recording next time they join the server"), true);
+                                                        source.sendFeedback(new LiteralText("Added Players will start recording next time they join the server").formatted(Formatting.YELLOW), true);
                                                         ServerSideReplayRecorderServer.saveConfig();
                                                     }
                                                     return 0;
@@ -83,12 +91,12 @@ public class ReplayCommand {
                                                     AtomicInteger count = new AtomicInteger();
                                                     to_remove.forEach(n -> {
                                                         if (ServerSideReplayRecorderServer.config.getRecordable_users().remove(n)) {
-                                                            source.sendFeedback(new LiteralText("%s removed to replay list".formatted(n)), true);
+                                                            source.sendFeedback(new LiteralText("%s removed to replay list".formatted(n)).formatted(Formatting.YELLOW), true);
                                                             count.getAndIncrement();
                                                         }
                                                     });
                                                     if (count.get() > 0) {
-                                                        source.sendFeedback(new LiteralText("Removed players will stop recording on logout"), true);
+                                                        source.sendFeedback(new LiteralText("Removed players will stop recording on logout").formatted(Formatting.YELLOW), true);
                                                         ServerSideReplayRecorderServer.saveConfig();
                                                     }
                                                     return 0;
@@ -97,7 +105,7 @@ public class ReplayCommand {
                                         .executes(context -> {
                                             ServerCommandSource source = context.getSource();
                                             source.sendFeedback(new LiteralText("Replay allowed users: %s"
-                                                            .formatted(String.join(", ", ServerSideReplayRecorderServer.config.getRecordable_users()))),
+                                                            .formatted(String.join(", ", ServerSideReplayRecorderServer.config.getRecordable_users()))).formatted(Formatting.YELLOW),
                                                     false);
                                             return 0;
                                         })
@@ -105,12 +113,12 @@ public class ReplayCommand {
                 ).then(
                         CommandManager.literal("status")
                                 .executes(context -> {
-                                    context.getSource().sendFeedback(new LiteralText("Recording " + ((ServerSideReplayRecorderServer.config.isRecording_enabled()) ? "Enabled" : "Disabled")), true);
+                                    context.getSource().sendFeedback(new LiteralText("Recording " + ((ServerSideReplayRecorderServer.config.isRecording_enabled()) ? "Enabled" : "Disabled")).formatted(Formatting.YELLOW), true);
                                     return 0;
                                 })
                                 .then(CommandManager.literal("toggle").executes(context -> {
                                     ServerSideReplayRecorderServer.config.setRecording_enabled(!ServerSideReplayRecorderServer.config.isRecording_enabled());
-                                    context.getSource().sendFeedback(new LiteralText("Recording " + ((ServerSideReplayRecorderServer.config.isRecording_enabled()) ? "Enabled" : "Disabled")), true);
+                                    context.getSource().sendFeedback(new LiteralText("Recording " + ((ServerSideReplayRecorderServer.config.isRecording_enabled()) ? "Enabled" : "Disabled")).formatted(Formatting.YELLOW), true);
                                     ServerSideReplayRecorderServer.saveConfig();
                                     return 0;
                                 }))
@@ -126,17 +134,17 @@ public class ReplayCommand {
                                                 )
                                                 .executes(
                                                         context -> {
-                                                            String regionName = context.getArgument("regionName", String.class);
+                                                            String regionName = StringArgumentType.getString(context,"regionName");
                                                             RegionRecorder recorder = RegionRecorder.recorders.get(regionName);
                                                             if( recorder != null){
                                                                 ServerCommandSource source = context.getSource();
-                                                                source.sendFeedback(new LiteralText("Region %s:".formatted(regionName)),true);
-                                                                source.sendFeedback(new LiteralText("Dimension: %s".formatted(recorder.world.getRegistryKey().getValue())),true);
-                                                                source.sendFeedback(new LiteralText("Area: %d %d to %d %d".formatted(recorder.region.pos1.x,recorder.region.pos1.z,recorder.region.pos2.x,recorder.region.pos2.z)),true);
-                                                                source.sendFeedback(new LiteralText("Uptime: %s".formatted(DurationFormatUtils.formatDurationHMS(recorder.getUptime().toMillis()))),true);
+                                                                source.sendFeedback(new LiteralText("Region %s:".formatted(regionName)).formatted(Formatting.YELLOW),true);
+                                                                source.sendFeedback(new LiteralText("Dimension: %s".formatted(recorder.world.getRegistryKey().getValue()).formatted(Formatting.YELLOW)),true);
+                                                                source.sendFeedback(new LiteralText("Area: %d %d to %d %d".formatted(recorder.region.pos1.x,recorder.region.pos1.z,recorder.region.pos2.x,recorder.region.pos2.z).formatted(Formatting.YELLOW)),true);
+                                                                source.sendFeedback(new LiteralText("Uptime: %s".formatted(DurationFormatUtils.formatDurationHMS(recorder.getUptime().toMillis())).formatted(Formatting.YELLOW)),true);
                                                                 return 0;
                                                             }else{
-                                                                context.getSource().sendError(new LiteralText("Unknown Region %s".formatted(regionName)));
+                                                                context.getSource().sendError(new LiteralText("Unknown Region %s".formatted(regionName)).formatted(Formatting.RED));
                                                                 return 1;
                                                             }
                                                         }
@@ -148,27 +156,32 @@ public class ReplayCommand {
                                                                                         CommandManager.argument("to", ColumnPosArgumentType.columnPos())
                                                                                                 .executes(
                                                                                                         context -> {
-                                                                                                            String regionName = context.getArgument("regionName", String.class);
+                                                                                                            String regionName = StringArgumentType.getString(context, "regionName");
                                                                                                             ColumnPos pos1 = ColumnPosArgumentType.getColumnPos(context, "from");
                                                                                                             ColumnPos pos2 = ColumnPosArgumentType.getColumnPos(context, "to");
                                                                                                             ChunkPos cpos1 = new ChunkPos(ChunkSectionPos.getSectionCoord(pos1.x),ChunkSectionPos.getSectionCoord(pos1.z));
                                                                                                             ChunkPos cpos2 = new ChunkPos(ChunkSectionPos.getSectionCoord(pos2.x),ChunkSectionPos.getSectionCoord(pos2.z));
-
-                                                                                                            RegionRecorder recorder = RegionRecorder.recorders.get(regionName);
-                                                                                                            if( recorder == null){
-                                                                                                                ServerCommandSource source = context.getSource();
-                                                                                                                try {
-                                                                                                                    recorder = RegionRecorder.create(regionName, cpos1, cpos2, source.getWorld());
-                                                                                                                    source.sendFeedback(new LiteralText("Started Recording Region %s, from %d %d to %d %d".formatted(regionName, recorder.region.pos1.x,recorder.region.pos1.z,recorder.region.pos2.x,recorder.region.pos2.z)),true);
-                                                                                                                    return 0;
-                                                                                                                } catch (Throwable e) {
-                                                                                                                    e.printStackTrace();
-                                                                                                                    context.getSource().sendError(new LiteralText("An Exception occurred while starting %s recording".formatted(regionName)));
-                                                                                                                    return 2;
+                                                                                                            if (ServerSideReplayRecorderServer.config.isRecording_enabled()) {
+                                                                                                                RegionRecorder recorder = RegionRecorder.recorders.get(regionName);
+                                                                                                                if (recorder == null) {
+                                                                                                                    ServerCommandSource source = context.getSource();
+                                                                                                                    try {
+                                                                                                                        recorder = RegionRecorder.create(regionName, cpos1, cpos2, source.getWorld());
+                                                                                                                        source.sendFeedback(new LiteralText("Started Recording Region %s, from %d %d to %d %d".formatted(regionName, recorder.region.pos1.x, recorder.region.pos1.z, recorder.region.pos2.x, recorder.region.pos2.z)).formatted(Formatting.YELLOW), true);
+                                                                                                                        return 0;
+                                                                                                                    } catch (
+                                                                                                                            Throwable e) {
+                                                                                                                        e.printStackTrace();
+                                                                                                                        context.getSource().sendError(new LiteralText("An Exception occurred while starting %s recording".formatted(regionName)).formatted(Formatting.RED));
+                                                                                                                        return 2;
+                                                                                                                    }
+                                                                                                                } else {
+                                                                                                                    context.getSource().sendError(new LiteralText("Region %s already started".formatted(regionName)).formatted(Formatting.RED));
+                                                                                                                    return 1;
                                                                                                                 }
-                                                                                                            }else{
-                                                                                                                context.getSource().sendError(new LiteralText("Region %s already started".formatted(regionName)));
-                                                                                                                return 1;
+                                                                                                            } else {
+                                                                                                                context.getSource().sendError(new LiteralText("Recording is disabled").formatted(Formatting.RED));
+                                                                                                                return 3;
                                                                                                             }
                                                                                                         }
                                                                                                 )
@@ -178,22 +191,120 @@ public class ReplayCommand {
                                                         CommandManager.literal("stop")
                                                                 .executes(
                                                                     context -> {
-                                                                        String regionName = context.getArgument("regionName", String.class);
+                                                                        String regionName = StringArgumentType.getString(context, "regionName");
                                                                         RegionRecorder recorder = RegionRecorder.recorders.get(regionName);
                                                                         if( recorder != null){
                                                                             ServerCommandSource source = context.getSource();
                                                                             recorder.handleDisconnect();
-                                                                            source.sendFeedback(new LiteralText("Region %s stopped and saved".formatted(regionName)),true);
+                                                                            source.sendFeedback(new LiteralText("Region %s stopped and saved (%s)".formatted(regionName, recorder.getFileName())).formatted(Formatting.YELLOW),true);
                                                                             return 0;
                                                                         }else{
-                                                                            context.getSource().sendError(new LiteralText("Unknown Region %s".formatted(regionName)));
+                                                                            context.getSource().sendError(new LiteralText("Unknown Region %s".formatted(regionName)).formatted(Formatting.RED));
                                                                             return 1;
                                                                         }
                                                                     }
                                                                 )
                                                 )
                                 )
+                ).then(
+                        CommandManager.literal("file")
+                                .then(
+                                        CommandManager.literal("player")
+                                                .then(
+                                                        handleFile(PlayerRecorder.PLAYER_FOLDER)
+                                                )
+                                ).then(
+                                        CommandManager.literal("region")
+                                                .then(
+                                                        handleFile(RegionRecorder.REGION_FOLDER)
+                                                )
+                                )
                 )
         );
+    }
+
+    private static RequiredArgumentBuilder<ServerCommandSource, String> handleFile(String subFolder) {
+        return CommandManager.argument("name", StringArgumentType.word())
+                .suggests(
+                        (context, builder) -> {
+                            File folder = Paths.get(ServerSideReplayRecorderServer.config.getReplay_folder_name(), subFolder).toFile();
+                            Set<String> suggestions = new LinkedHashSet<>();
+                            if (folder.exists() && folder.isDirectory()) {
+                                for (File file : Objects.requireNonNull(folder.listFiles(File::isDirectory))) {
+                                    if (!file.getName().matches(".*\\s.*"))
+                                        suggestions.add(file.getName());
+                                }
+                            }
+                            return CommandSource.suggestMatching(
+                                    suggestions,
+                                    builder
+                            );
+                        }
+                ).then(
+                        CommandManager.argument("filename", StringArgumentType.string())
+                                .suggests(
+                                        (context, builder) -> {
+                                            String name = StringArgumentType.getString(context, "name");
+                                            File folder = Paths.get(ServerSideReplayRecorderServer.config.getReplay_folder_name(), subFolder, name).toFile();
+                                            Set<String> suggestions = new LinkedHashSet<>();
+                                            if (folder.exists() && folder.isDirectory()) {
+                                                for (File file : Objects.requireNonNull(folder.listFiles(File::isFile))) {
+                                                    if (FilenameUtils.getExtension(file.getName()).equals("mcpr"))
+                                                        suggestions.add(file.getName());
+                                                }
+                                            }
+                                            return CommandSource.suggestMatching(
+                                                    suggestions,
+                                                    builder
+                                            );
+                                        }
+                                ).then(
+                                        CommandManager.literal("delete")
+                                                .executes(
+                                                        context -> {
+                                                            String name = StringArgumentType.getString(context, "name");
+                                                            String filename = StringArgumentType.getString(context, "filename");
+                                                            File file = Paths.get(ServerSideReplayRecorderServer.config.getReplay_folder_name(), subFolder, name, filename).toFile();
+                                                            ServerCommandSource source = context.getSource();
+                                                            if (file.exists() && file.isFile()) {
+                                                                try {
+                                                                    Files.delete(file.toPath());
+                                                                    source.sendFeedback(new LiteralText("File %s deleted".formatted(file.toString())).formatted(Formatting.YELLOW), true);
+                                                                } catch (Throwable t) {
+                                                                    source.sendError(new LiteralText("An Error occurred while deleting File %s".formatted(file.toString())).formatted(Formatting.RED));
+                                                                    return 1;
+                                                                }
+                                                                return 0;
+                                                            } else {
+                                                                source.sendError(new LiteralText("File %s does not Exist".formatted(file.toString())).formatted(Formatting.RED));
+                                                                return 1;
+                                                            }
+                                                        }
+                                                )
+                                ).then(
+                                        CommandManager.literal("upload")
+                                                .executes(
+                                                        context -> {
+                                                            String name = StringArgumentType.getString(context, "name");
+                                                            String filename = StringArgumentType.getString(context, "filename");
+                                                            File file = Paths.get(ServerSideReplayRecorderServer.config.getReplay_folder_name(), subFolder, name, filename).toFile();
+                                                            ServerCommandSource source = context.getSource();
+                                                            if (file.exists() && file.isFile()) {
+                                                                try {
+                                                                    String result = FileHandlingUtility.uploadToTemp(file);
+                                                                    source.sendFeedback(new LiteralText(result).formatted(Formatting.YELLOW), true);
+                                                                } catch (Throwable t) {
+                                                                    source.sendError(new LiteralText("An Error occurred while uploading File %s".formatted(file.toString())).formatted(Formatting.RED));
+                                                                    return 1;
+                                                                }
+                                                                return 0;
+                                                            } else {
+                                                                source.sendError(new LiteralText("File %s does not Exist".formatted(file.toString())).formatted(Formatting.RED));
+                                                                return 1;
+                                                            }
+                                                        }
+                                                )
+                                )
+                );
     }
 }

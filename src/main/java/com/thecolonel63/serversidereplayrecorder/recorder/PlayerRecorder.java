@@ -29,15 +29,18 @@ import net.minecraft.util.math.BlockPos;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
 
 public class PlayerRecorder {
 
+    public static final String PLAYER_FOLDER = "player";
     public final ClientConnection connection;
     public final MinecraftServer ms = ServerSideReplayRecorderServer.server;
     protected final File tmp_folder;
+
     protected final BufferedOutputStream bos;
     protected final FileOutputStream fos;
     protected final ItemStack[] playerItems = new ItemStack[6];
@@ -46,6 +49,7 @@ public class PlayerRecorder {
     public String playerName;
     public boolean isRespawning;
     protected long start;
+    protected String fileName;
     protected NetworkState state = NetworkState.LOGIN;
     protected int timestamp;
     protected boolean startedRecording = false;
@@ -55,14 +59,17 @@ public class PlayerRecorder {
     protected Integer rotationYawHeadBefore;
     protected int lastRiding = -1;
     protected boolean wasSleeping;
-
     protected boolean open = true;
+
+    public String getFileName() {
+        return fileName;
+    }
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     public PlayerRecorder(ClientConnection connection) throws IOException {
-        tmp_folder = new File(FabricLoader.getInstance().getGameDir() + "/" + ServerSideReplayRecorderServer.config.getReplay_folder_name() + "/recording_" + this.hashCode());
+        tmp_folder = Paths.get(FabricLoader.getInstance().getGameDir().toString(), ServerSideReplayRecorderServer.config.getReplay_folder_name(), "recording_" + this.hashCode()).toFile();
         tmp_folder.mkdirs();
-        fos = new FileOutputStream(tmp_folder + "/recording.tmcpr", true);
+        fos = new FileOutputStream(Paths.get(tmp_folder.getAbsolutePath(), "recording.tmcpr").toFile(), true);
         bos = new BufferedOutputStream(fos);
         this.connection = connection;
     }
@@ -95,17 +102,14 @@ public class PlayerRecorder {
     
     protected String getSaveFolder(){
         String name = (playerName != null) ? playerName : "NONAME";
-        return tmp_folder.getParentFile() + "/" + (ServerSideReplayRecorderServer.config.use_username_for_recordings() ? name : playerId.toString());
+        return Paths.get(FabricLoader.getInstance().getGameDir().toString(), ServerSideReplayRecorderServer.config.getReplay_folder_name(), PLAYER_FOLDER,name).toString();
     }
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     protected void compressReplay() {
-        Calendar cal = Calendar.getInstance();
-        cal.setTimeInMillis(start);
-        String fileName = cal.get(Calendar.YEAR) + "_" + String.format("%02d", (cal.get(Calendar.MONTH) + 1)) + "_" + String.format("%02d", (cal.get(Calendar.DAY_OF_MONTH))) + "_" + String.format("%02d", (cal.get(Calendar.HOUR_OF_DAY))) + "_" + String.format("%02d", (cal.get(Calendar.MINUTE))) + "_" + String.format("%02d", (cal.get(Calendar.SECOND))) + ".mcpr";
-        
 
-        File output = new File( this.getSaveFolder() + "/" + fileName);
+
+        File output = Paths.get(this.getSaveFolder(),fileName).toFile();
         ArrayList<File> filesToCompress = new ArrayList<>() {{
             add(new File(tmp_folder + "/metaData.json"));
             add(new File(tmp_folder + "/recording.tmcpr"));
@@ -124,6 +128,9 @@ public class PlayerRecorder {
     public void onPacket(Packet<?> packet) {
         if (!startedRecording) {
             start = System.currentTimeMillis(); //More accurate timestamps.
+            Calendar cal = Calendar.getInstance();
+            cal.setTimeInMillis(start);
+            fileName = cal.get(Calendar.YEAR) + "_" + String.format("%02d", (cal.get(Calendar.MONTH) + 1)) + "_" + String.format("%02d", (cal.get(Calendar.DAY_OF_MONTH))) + "_" + String.format("%02d", (cal.get(Calendar.HOUR_OF_DAY))) + "_" + String.format("%02d", (cal.get(Calendar.MINUTE))) + "_" + String.format("%02d", (cal.get(Calendar.SECOND))) + ".mcpr";
             startedRecording = true;
         }
 

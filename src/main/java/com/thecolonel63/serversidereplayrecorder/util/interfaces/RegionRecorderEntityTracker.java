@@ -4,5 +4,8 @@ import com.thecolonel63.serversidereplayrecorder.recorder.RegionRecorder;
 
 public interface RegionRecorderEntityTracker {
     void updateTrackedStatus(RegionRecorder recorder);
-    void updateTrackedStatus(Iterable<RegionRecorder> recorder);
+    default void updateTrackedStatus(Iterable<RegionRecorder> recorderIterable) {
+        for(RegionRecorder recorder : recorderIterable)
+            this.updateTrackedStatus(recorder);
+    }
 }
