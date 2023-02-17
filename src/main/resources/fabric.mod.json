@@ -13,6 +13,9 @@
   "license": "MIT",
   "environment": "server",
   "entrypoints": {
+    "main": [
+      "com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer"
+    ]
   },
   "accessWidener": "serverReplayMod.accesswidener",
   "mixins": [

@@ -1,15 +1,16 @@
 package com.thecolonel63.serversidereplayrecorder;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactoryBuilder;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 import com.thecolonel63.serversidereplayrecorder.config.MainConfig;
 import com.thecolonel63.serversidereplayrecorder.recorder.PlayerRecorder;
-import com.thecolonel63.serversidereplayrecorder.recorder.RegionRecorder;
 import com.thecolonel63.serversidereplayrecorder.util.StoppedReplayFixer;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
+import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.server.MinecraftServer;
@@ -21,13 +22,13 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Environment(EnvType.SERVER)
-public class ServerSideReplayRecorderServer {
+public class ServerSideReplayRecorderServer implements ModInitializer {
 
     static {
         YAMLFactoryBuilder builder = YAMLFactory.builder();
         builder.disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER);
         builder.enable(YAMLGenerator.Feature.INDENT_ARRAYS_WITH_INDICATOR);
-        yaml = new ObjectMapper(builder.build());
+        yaml = new ObjectMapper(builder.build()).configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
     private static final ObjectMapper yaml;
@@ -116,7 +117,7 @@ public class ServerSideReplayRecorderServer {
 
     }
 
-    public static void init(MinecraftServer mcServer) {
+    public static void registerServer(MinecraftServer mcServer) {
         server = mcServer;
         fixStoppedReplays();
     }
@@ -127,10 +128,13 @@ public class ServerSideReplayRecorderServer {
                 //Initiate the saving process of what isn't automatically saved.
                 playerThreadRecorder.onPlayerTick();
             });
-            /*RegionRecorder.recorders.forEach((s, recorder) -> {
-                recorder.onPlayerTick();
-            });*/
         }
+    }
+
+    @Override
+    public void onInitialize() {
+        LOGGER.info(ServerSideReplayRecorderServer.class.getSimpleName() + " loaded");
+        loadConfig();
     }
 
     private enum value_type {

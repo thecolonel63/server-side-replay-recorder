@@ -31,6 +31,7 @@ public class MainConfig {
         return file_storage_url;
     }
 
+    @JsonProperty(value = "file_storage_url")
     public void setFile_storage_url(String file_storage_url) throws MalformedURLException {
         this.file_storage_url = new URL(file_storage_url);
     }

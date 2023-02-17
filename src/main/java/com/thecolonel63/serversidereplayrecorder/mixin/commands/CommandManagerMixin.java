@@ -20,7 +20,6 @@ public abstract class CommandManagerMixin {
 
     @Inject(at = @At(value = "INVOKE", target = "Lcom/mojang/brigadier/CommandDispatcher;setConsumer(Lcom/mojang/brigadier/ResultConsumer;)V"), method = "<init>")
     private void fabric_addCommands(CommandManager.RegistrationEnvironment environment, CallbackInfo ci) {
-        ServerSideReplayRecorderServer.loadConfig();
         ReplayCommand cmd = new ReplayCommand();
         cmd.register(dispatcher);
     }
