@@ -1,6 +1,7 @@
 package com.thecolonel63.serversidereplayrecorder.mixin.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer;
 import com.thecolonel63.serversidereplayrecorder.command.ReplayCommand;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
@@ -19,6 +20,7 @@ public abstract class CommandManagerMixin {
 
     @Inject(at = @At(value = "INVOKE", target = "Lcom/mojang/brigadier/CommandDispatcher;setConsumer(Lcom/mojang/brigadier/ResultConsumer;)V"), method = "<init>")
     private void fabric_addCommands(CommandManager.RegistrationEnvironment environment, CallbackInfo ci) {
+        ServerSideReplayRecorderServer.loadConfig();
         ReplayCommand cmd = new ReplayCommand();
         cmd.register(dispatcher);
     }

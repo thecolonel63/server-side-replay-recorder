@@ -18,6 +18,7 @@ public class MainConfig {
         }catch (Throwable ignored){}
     }
 
+    public int command_op_level = 4;
     private File replay_folder_name = new File("replay_recordings");
     private boolean use_username_for_recordings = true;
     private String server_name = "My Server";
@@ -32,6 +33,14 @@ public class MainConfig {
 
     public void setFile_storage_url(String file_storage_url) throws MalformedURLException {
         this.file_storage_url = new URL(file_storage_url);
+    }
+
+    public int getCommand_op_level() {
+        return command_op_level;
+    }
+
+    public void setCommand_op_level(int command_op_level) {
+        this.command_op_level = command_op_level;
     }
 
     public boolean isRecording_enabled() {

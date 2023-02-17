@@ -44,7 +44,7 @@ public class ServerSideReplayRecorderServer {
     public static final String configPath = FabricLoader.getInstance().getConfigDir() + "/ServerSideReplayRecorder.yml";
     public static MainConfig config = new MainConfig();
 
-    private static void loadConfig() {
+    public static void loadConfig() {
         try {
 
             yaml.findAndRegisterModules();
@@ -118,7 +118,6 @@ public class ServerSideReplayRecorderServer {
 
     public static void init(MinecraftServer mcServer) {
         server = mcServer;
-        loadConfig();
         fixStoppedReplays();
     }
 
