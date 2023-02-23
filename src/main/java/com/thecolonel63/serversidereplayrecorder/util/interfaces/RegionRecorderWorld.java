@@ -11,4 +11,6 @@ public interface RegionRecorderWorld {
 
     Map<ChunkPos,Set<RegionRecorder>> getRegionRecordersByChunk();
 
+    Map<ChunkPos,Set<RegionRecorder>> getRegionRecordersByExpandedChunk();
+
 }

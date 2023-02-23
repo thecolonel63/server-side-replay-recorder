@@ -45,9 +45,16 @@ public class ServerWorldMixin implements RegionRecorderWorld {
 
     private final Map<ChunkPos, Set<RegionRecorder>> recorders_by_chunk = new ConcurrentHashMap<>();
 
+    private final Map<ChunkPos, Set<RegionRecorder>> recorders_by_expanded_chunk = new ConcurrentHashMap<>();
+
     @Override
     public Map<ChunkPos, Set<RegionRecorder>> getRegionRecordersByChunk() {
         return this.recorders_by_chunk;
+    }
+
+    @Override
+    public Map<ChunkPos, Set<RegionRecorder>> getRegionRecordersByExpandedChunk() {
+        return this.recorders_by_expanded_chunk;
     }
 
     @Redirect(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/PlayerManager;sendToDimension(Lnet/minecraft/network/Packet;Lnet/minecraft/util/registry/RegistryKey;)V"))

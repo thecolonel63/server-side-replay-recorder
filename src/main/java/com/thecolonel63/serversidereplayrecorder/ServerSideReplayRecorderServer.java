@@ -137,9 +137,4 @@ public class ServerSideReplayRecorderServer implements ModInitializer {
         loadConfig();
     }
 
-    private enum value_type {
-        BOOLEAN,
-        STRING
-    }
-
 }

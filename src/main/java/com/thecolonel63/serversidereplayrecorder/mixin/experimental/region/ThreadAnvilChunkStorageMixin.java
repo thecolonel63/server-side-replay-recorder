@@ -62,7 +62,7 @@ public abstract class ThreadAnvilChunkStorageMixin implements RegionRecorderStor
     @Inject(method = "makeChunkTickable", at = @At(value = "INVOKE", target = "Ljava/util/concurrent/CompletableFuture;thenAcceptAsync(Ljava/util/function/Consumer;Ljava/util/concurrent/Executor;)Ljava/util/concurrent/CompletableFuture;"), locals = LocalCapture.CAPTURE_FAILHARD)
     void handleChunkLoaded(ChunkHolder holder, CallbackInfoReturnable<CompletableFuture<Either<WorldChunk, ChunkHolder.Unloaded>>> cir, ChunkPos chunkPos, CompletableFuture completableFuture, CompletableFuture<Either<WorldChunk, ChunkHolder.Unloaded>> completableFuture2){
         completableFuture2.thenApplyAsync(either -> either.ifLeft(worldChunk -> {
-            Set<RegionRecorder> recorders = ((RegionRecorderWorld)this.world).getRegionRecordersByChunk().get(holder.getPos());
+            Set<RegionRecorder> recorders = ((RegionRecorderWorld)this.world).getRegionRecordersByExpandedChunk().get(holder.getPos());
             if (recorders != null)
                 recorders.forEach( r -> {
                     r.onPacket(new ChunkDataS2CPacket(worldChunk));

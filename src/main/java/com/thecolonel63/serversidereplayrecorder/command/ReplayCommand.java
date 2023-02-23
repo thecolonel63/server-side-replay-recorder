@@ -78,6 +78,10 @@ public class ReplayCommand {
                                                         try {
                                                             Files.delete(file.toPath());
                                                             source.sendFeedback(new LiteralText("File %s deleted".formatted(file.toString())).formatted(Formatting.YELLOW), true);
+                                                            if (Objects.requireNonNull(file.getParentFile().list()).length == 0){
+                                                                Files.delete(file.getParentFile().toPath());
+                                                                source.sendFeedback(new LiteralText("Folder %s deleted".formatted(file.getParentFile().toString())).formatted(Formatting.YELLOW), true);
+                                                            }
                                                         } catch (Throwable t) {
                                                             source.sendError(new LiteralText("An Error occurred while deleting File %s".formatted(file.toString())).formatted(Formatting.RED));
                                                             return 1;
@@ -216,10 +220,34 @@ public class ReplayCommand {
                         CommandManager.literal("status")
                                 .executes(context -> {
                                     context.getSource().sendFeedback(new LiteralText("Recording " + ((ServerSideReplayRecorderServer.config.isRecording_enabled()) ? "Enabled" : "Disabled")).formatted(Formatting.YELLOW), true);
+
+                                    Collection<RegionRecorder> r_recorders = RegionRecorder.recorders.values();
+
+                                    if(!r_recorders.isEmpty()) {
+                                        context.getSource().sendFeedback(new LiteralText("Region Recordings:").formatted(Formatting.YELLOW), true);
+                                        r_recorders.forEach( r -> {
+                                            context.getSource().sendFeedback(new LiteralText("    %s: %s %s".formatted(r.regionName, r.world.getRegistryKey().getValue(), r.getUptime())).formatted(Formatting.YELLOW), true);
+                                        });
+                                    }
+
+                                    Collection<PlayerRecorder> p_recorders = ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap.values();
+
+                                    if(!p_recorders.isEmpty()) {
+                                        context.getSource().sendFeedback(new LiteralText("Player Recordings:").formatted(Formatting.YELLOW), true);
+                                        p_recorders.forEach( r -> {
+                                            context.getSource().sendFeedback(new LiteralText("    %s: %s".formatted(r.playerName, r.getUptime())).formatted(Formatting.YELLOW), true);
+                                        });
+                                    }
                                     return 0;
                                 })
-                                .then(CommandManager.literal("toggle").executes(context -> {
-                                    ServerSideReplayRecorderServer.config.setRecording_enabled(!ServerSideReplayRecorderServer.config.isRecording_enabled());
+                                .then(CommandManager.literal("enable").executes(context -> {
+                                    ServerSideReplayRecorderServer.config.setRecording_enabled(true);
+                                    context.getSource().sendFeedback(new LiteralText("Recording " + ((ServerSideReplayRecorderServer.config.isRecording_enabled()) ? "Enabled" : "Disabled")).formatted(Formatting.YELLOW), true);
+                                    ServerSideReplayRecorderServer.saveConfig();
+                                    return 0;
+                                }))
+                                .then(CommandManager.literal("disable").executes(context -> {
+                                    ServerSideReplayRecorderServer.config.setRecording_enabled(false);
                                     context.getSource().sendFeedback(new LiteralText("Recording " + ((ServerSideReplayRecorderServer.config.isRecording_enabled()) ? "Enabled" : "Disabled")).formatted(Formatting.YELLOW), true);
                                     ServerSideReplayRecorderServer.saveConfig();
                                     return 0;
@@ -242,7 +270,7 @@ public class ReplayCommand {
                                                                 ServerCommandSource source = context.getSource();
                                                                 source.sendFeedback(new LiteralText("Region %s:".formatted(regionName)).formatted(Formatting.YELLOW), true);
                                                                 source.sendFeedback(new LiteralText("Dimension: %s".formatted(recorder.world.getRegistryKey().getValue()).formatted(Formatting.YELLOW)), true);
-                                                                source.sendFeedback(new LiteralText("Area: %d %d to %d %d".formatted(recorder.region.pos1.x, recorder.region.pos1.z, recorder.region.pos2.x, recorder.region.pos2.z).formatted(Formatting.YELLOW)), true);
+                                                                source.sendFeedback(new LiteralText("Area: %d %d to %d %d".formatted(recorder.region.min.x, recorder.region.min.z, recorder.region.max.x, recorder.region.max.z).formatted(Formatting.YELLOW)), true);
                                                                 source.sendFeedback(new LiteralText("Uptime: %s".formatted(DurationFormatUtils.formatDurationHMS(recorder.getUptime().toMillis())).formatted(Formatting.YELLOW)), true);
                                                                 return 0;
                                                             } else {
@@ -269,7 +297,7 @@ public class ReplayCommand {
                                                                                                                     ServerCommandSource source = context.getSource();
                                                                                                                     try {
                                                                                                                         recorder = RegionRecorder.create(regionName, cpos1, cpos2, source.getWorld());
-                                                                                                                        source.sendFeedback(new LiteralText("Started Recording Region %s, from %d %d to %d %d".formatted(regionName, recorder.region.pos1.x, recorder.region.pos1.z, recorder.region.pos2.x, recorder.region.pos2.z)).formatted(Formatting.YELLOW), true);
+                                                                                                                        source.sendFeedback(new LiteralText("Started Recording Region %s, from %d %d to %d %d".formatted(regionName, recorder.region.min.x, recorder.region.min.z, recorder.region.max.x, recorder.region.max.z)).formatted(Formatting.YELLOW), true);
                                                                                                                         return 0;
                                                                                                                     } catch (
                                                                                                                             Throwable e) {
@@ -306,6 +334,25 @@ public class ReplayCommand {
                                                                             }
                                                                         }
                                                                 )
+                                                ).then(
+                                                        CommandManager.literal("status")
+                                                                .executes(
+                                                                context -> {
+                                                                    String regionName = StringArgumentType.getString(context, "regionName");
+                                                                    RegionRecorder recorder = RegionRecorder.recorders.get(regionName);
+                                                                    if (recorder != null) {
+                                                                        ServerCommandSource source = context.getSource();
+                                                                        source.sendFeedback(new LiteralText("Region %s:".formatted(regionName)).formatted(Formatting.YELLOW), true);
+                                                                        source.sendFeedback(new LiteralText("Dimension: %s".formatted(recorder.world.getRegistryKey().getValue()).formatted(Formatting.YELLOW)), true);
+                                                                        source.sendFeedback(new LiteralText("Area: %d %d to %d %d".formatted(recorder.region.min.x, recorder.region.min.z, recorder.region.max.x, recorder.region.max.z).formatted(Formatting.YELLOW)), true);
+                                                                        source.sendFeedback(new LiteralText("Uptime: %s".formatted(DurationFormatUtils.formatDurationHMS(recorder.getUptime().toMillis())).formatted(Formatting.YELLOW)), true);
+                                                                        return 0;
+                                                                    } else {
+                                                                        context.getSource().sendError(new LiteralText("Unknown Region %s".formatted(regionName)).formatted(Formatting.RED));
+                                                                        return 1;
+                                                                    }
+                                                                }
+                                                        )
                                                 )
                                 )
                 ).then(

@@ -30,6 +30,7 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -79,14 +80,14 @@ public class PlayerRecorder {
             JsonObject object = new JsonObject();
             object.addProperty("singleplayer", false);
             object.addProperty("serverName", serverName);
-            object.addProperty("customServerName", serverName);
+            object.addProperty("customServerName", serverName + "|" + playerName);
             object.addProperty("duration", timestamp);
             object.addProperty("date", start);
             object.addProperty("mcversion", MinecraftVersion.GAME_VERSION.getName());
             object.addProperty("fileFormat", "MCPR");
             object.addProperty("fileFormatVersion", 14); //Unlikely to change any time soon, last time this was updates was several major versions ago.
             object.addProperty("protocol", SharedConstants.getProtocolVersion());
-            object.addProperty("generator", "thecolonel63's Server Side Replay Recorder");
+            object.addProperty("generator", "mattymatty's enhanced thecolonel63's Server Side Replay Recorder");
             object.addProperty("selfId", -1);
             object.add("players", uuids);
             FileWriter fw = new FileWriter(tmp_folder + "/metaData.json", false);
@@ -128,9 +129,8 @@ public class PlayerRecorder {
     public void onPacket(Packet<?> packet) {
         if (!startedRecording) {
             start = System.currentTimeMillis(); //More accurate timestamps.
-            Calendar cal = Calendar.getInstance();
-            cal.setTimeInMillis(start);
-            fileName = cal.get(Calendar.YEAR) + "_" + String.format("%02d", (cal.get(Calendar.MONTH) + 1)) + "_" + String.format("%02d", (cal.get(Calendar.DAY_OF_MONTH))) + "_" + String.format("%02d", (cal.get(Calendar.HOUR_OF_DAY))) + "_" + String.format("%02d", (cal.get(Calendar.MINUTE))) + "_" + String.format("%02d", (cal.get(Calendar.SECOND))) + ".mcpr";
+            Date time = new Date(start);
+            fileName = String.format("%s.mcpr", new SimpleDateFormat("yyyy-M-dd_HH-mm-ss").format(time));
             startedRecording = true;
         }
 

@@ -18,15 +18,16 @@ import net.minecraft.network.packet.s2c.play.*;
 import net.minecraft.server.world.ServerChunkManager;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.collection.DefaultedList;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.*;
 import net.minecraft.util.registry.DynamicRegistryManager;
 import net.minecraft.world.GameMode;
 import net.minecraft.world.GameRules;
+import net.minecraft.world.Heightmap;
 import net.minecraft.world.WorldProperties;
 import net.minecraft.world.biome.source.BiomeAccess;
 import net.minecraft.world.border.WorldBorder;
 import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.chunk.EmptyChunk;
 import net.minecraft.world.chunk.WorldChunk;
 
 import java.io.*;
@@ -48,15 +49,15 @@ public class RegionRecorder extends PlayerRecorder {
 
     public static final GameProfile FAKE_GAMEPROFILE = new GameProfile(PlayerEntity.getOfflinePlayerUuid("Camera"), "Camera");
 
-    public static String REGION_FOLDER = "region";
+    public static final String REGION_FOLDER = "region";
 
     public final String regionName;
 
     public final ChunkBox region;
 
-    public final ServerWorld world;
+    protected Vec3i viewpoint;
 
-    private PlayerEntity fakePlayer;
+    public final ServerWorld world;
 
     private RegionRecorder(String regionName, ChunkPos pos1, ChunkPos pos2, ServerWorld world) throws IOException {
         super(new ClientConnection(NetworkSide.SERVERBOUND){
@@ -72,28 +73,28 @@ public class RegionRecorder extends PlayerRecorder {
         });
         this.regionName = regionName;
         this.region = new ChunkBox(pos1,pos2);
+        this.viewpoint = new Vec3i(region.center.getCenterX(),(world.getBottomY() + world.getTopY())/2,region.center.getCenterZ());
         this.world = world;
+        this.playerSpawned = true;
     }
 
     public void init(){
+        //register as world (dimension) event listeners
         ((RegionRecorderWorld)world).getRegionRecorders().add(this);
+        //register as chunk watcher
         this.region.includedChunks.forEach( p -> ((RegionRecorderWorld)world).getRegionRecordersByChunk().computeIfAbsent(p, c -> new LinkedHashSet<>()).add(this));
+        this.region.expandedChunks.forEach( p -> ((RegionRecorderWorld)world).getRegionRecordersByExpandedChunk().computeIfAbsent(p, c -> new LinkedHashSet<>()).add(this));
+        //skip the login Phase and start immediatly with the Game packets
         onPacket(new LoginSuccessS2CPacket(FAKE_GAMEPROFILE));
-        WorldProperties worldProperties = world.getLevelProperties();
-        //spawn a dummy player
-        this.fakePlayer = new PlayerEntity(world, new BlockPos(region.center.getCenterX(),(world.getBottomY() + world.getTopY())/2,region.center.getCenterZ()),0, FAKE_GAMEPROFILE) {
-            @Override
-            public boolean isSpectator() {
-                return true;
-            }
+        //override the fake player name with the region name
+        this.playerName = regionName;
 
-            @Override
-            public boolean isCreative() {
-                return false;
-            }
-        };
+        WorldProperties worldProperties = world.getLevelProperties();
+
+
+        //save basic login packets
         onPacket(new GameJoinS2CPacket(
-                this.fakePlayer.getId(),
+                0,
                 GameMode.SPECTATOR,
                 GameMode.SPECTATOR,
                 BiomeAccess.hashSeed(world.getSeed()),
@@ -109,7 +110,6 @@ public class RegionRecorder extends PlayerRecorder {
                 world.isDebugWorld(),
                 world.isFlat()
         ));
-        //handle basic login packets
         onPacket(
                 new CustomPayloadS2CPacket(CustomPayloadS2CPacket.BRAND, new PacketByteBuf(Unpooled.buffer()).writeString(ms.getServerModName()))
         );
@@ -117,22 +117,12 @@ public class RegionRecorder extends PlayerRecorder {
         onPacket(new PlayerAbilitiesS2CPacket(new PlayerAbilities()));
         onPacket(new SynchronizeTagsS2CPacket(ms.getTagManager().toPacket(ms.getRegistryManager())));
 
-        PlayerListS2CPacket packet = new PlayerListS2CPacket(PlayerListS2CPacket.Action.ADD_PLAYER, Collections.emptyList());
-        packet.entries
-                .add(
-                        new PlayerListS2CPacket.Entry(
-                                fakePlayer.getGameProfile(),
-                                2,
-                                GameMode.SPECTATOR,
-                                fakePlayer.getName()
-                        )
-                );
-        onPacket(packet);
+        //save current player list
         ms.getPlayerManager().getPlayerList().forEach( p -> {
             onPacket(new PlayerListS2CPacket(PlayerListS2CPacket.Action.ADD_PLAYER, p));
         });
 
-
+        //save world ( dimension ) information
         WorldBorder worldBorder = world.getWorldBorder();
         onPacket(new WorldBorderInitializeS2CPacket(worldBorder));
         onPacket(new WorldTimeUpdateS2CPacket(world.getTime(), world.getTimeOfDay(), world.getGameRules().getBoolean(GameRules.DO_DAYLIGHT_CYCLE)));
@@ -146,31 +136,43 @@ public class RegionRecorder extends PlayerRecorder {
             onPacket(new ResourcePackSendS2CPacket(ms.getResourcePackUrl(), ms.getResourcePackHash(), ms.requireResourcePack(), ms.getResourcePackPrompt()));
         }
 
-        //set the replay viewpoint to the center of the watched region
-        onPacket(new PlayerPositionLookS2CPacket(this.fakePlayer.getX(), this.fakePlayer.getY(), fakePlayer.getZ(),0,0, Collections.emptySet(),0,false));
-
-        //set the render center
+        //set the render distance center
         onPacket(new ChunkRenderDistanceCenterS2CPacket(this.region.center.x, this.region.center.z));
 
-        //close loading screen
+        //close loading screen ( yes the inventory packet closes the loading screen )
         onPacket(new InventoryS2CPacket(0, 0, DefaultedList.ofSize(36, ItemStack.EMPTY), ItemStack.EMPTY));
 
         ServerChunkManager storage = world.getChunkManager();
         //load all watched chunks data
-        for (ChunkPos pos : this.region.includedChunks ){
+        for (ChunkPos pos : this.region.expandedChunks ){
             //get chunk if at least border
             Chunk chunk = storage.getWorldChunk(pos.x,pos.z);
             if (chunk instanceof WorldChunk worldChunk){
+                //if center chunk has data
+                if (pos.equals(this.region.center))
+                {
+                    int surface_y = chunk.sampleHeightmap(Heightmap.Type.MOTION_BLOCKING,viewpoint.getX(),viewpoint.getZ());
+                    BlockPos b_pos = new BlockPos(viewpoint.getX(), surface_y, viewpoint.getZ());
+                    while (!chunk.getBlockState(b_pos).isOpaque() && surface_y != chunk.getBottomY()){
+                        b_pos = new BlockPos(viewpoint.getX(), --surface_y, viewpoint.getZ());
+                    }
+                    //find the highest non-transparent block as viewpoint
+                    this.viewpoint = new Vec3i(viewpoint.getX(), surface_y + 1, viewpoint.getZ());
+                }
+                //save chunk
                 onPacket(new ChunkDataS2CPacket(worldChunk));
                 onPacket(new LightUpdateS2CPacket(pos,storage.getLightingProvider(),null,null,true));
             }
         }
-        //load all watched entities
+
+
+        //register as an entity watcher ( this will also send all the packets for spawning entities already in the region )
         ((RegionRecorderStorage)world.getChunkManager().threadedAnvilChunkStorage).registerRecorder(this);
 
-        //repeat viewpoint packet
-        onPacket(new PlayerPositionLookS2CPacket(this.fakePlayer.getX(), this.fakePlayer.getY(), fakePlayer.getZ(),0,0, Collections.emptySet(),0,false));
+        //set the replay viewpoint to the center of the watched region
+        onPacket(new PlayerPositionLookS2CPacket(viewpoint.getX() + 0.5,viewpoint.getY(),viewpoint.getZ() + 0.5,0,0, Collections.emptySet(),0,false));
 
+        //ready to record changes
     }
 
     @Override
@@ -180,24 +182,17 @@ public class RegionRecorder extends PlayerRecorder {
     }
 
     @Override
-    public void spawnRecordingPlayer() {
-        try {
-            save(new PlayerSpawnS2CPacket(this.fakePlayer));
-            save(new EntityTrackerUpdateS2CPacket(this.fakePlayer.getId(), this.fakePlayer.getDataTracker(), false));
-            playerSpawned = true;
-            lastX = lastY = lastZ = null;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Override
     public void handleDisconnect() {
         ((RegionRecorderWorld)world).getRegionRecorders().remove(this);
         this.region.includedChunks.forEach( p -> Optional.ofNullable(((RegionRecorderWorld)world).getRegionRecordersByChunk().get(p)).ifPresent(s -> {
             s.remove(this);
             if (s.isEmpty())
                 ((RegionRecorderWorld)world).getRegionRecordersByChunk().remove(p);
+        }));
+        this.region.expandedChunks.forEach( p -> Optional.ofNullable(((RegionRecorderWorld)world).getRegionRecordersByExpandedChunk().get(p)).ifPresent(s -> {
+            s.remove(this);
+            if (s.isEmpty())
+                ((RegionRecorderWorld)world).getRegionRecordersByExpandedChunk().remove(p);
         }));
         super.handleDisconnect();
         recorders.remove(regionName);
