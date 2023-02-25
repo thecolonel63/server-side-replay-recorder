@@ -96,6 +96,13 @@ public class RegionRecorder extends PlayerRecorder {
         //override the fake player name with the region name
         this.playerName = regionName;
 
+        //register as world (dimension) event listeners
+        ((RegionRecorderWorld)world).getRegionRecorders().add(this);
+        //register as chunk watcher
+        this.region.includedChunks.forEach( p -> ((RegionRecorderWorld)world).getRegionRecordersByChunk().computeIfAbsent(p, c -> new LinkedHashSet<>()).add(this));
+        this.region.expandedChunks.forEach( p -> ((RegionRecorderWorld)world).getRegionRecordersByExpandedChunk().computeIfAbsent(p, c -> new LinkedHashSet<>()).add(this));
+
+
         WorldProperties worldProperties = world.getLevelProperties();
 
 
@@ -163,25 +170,22 @@ public class RegionRecorder extends PlayerRecorder {
             if(worldChunk != null) {
                 //if center chunk has data
                 if (pos.equals(this.region.center)) {
+
+                    //find the highest non-transparent block as viewpoint
                     int surface_y = worldChunk.sampleHeightmap(Heightmap.Type.MOTION_BLOCKING, viewpoint.getX(), viewpoint.getZ());
                     BlockPos b_pos = new BlockPos(viewpoint.getX(), surface_y, viewpoint.getZ());
                     while (!worldChunk.getBlockState(b_pos).isOpaque() && surface_y != chunk.getBottomY()) {
                         b_pos = new BlockPos(viewpoint.getX(), --surface_y, viewpoint.getZ());
                     }
-                    //find the highest non-transparent block as viewpoint
-                    this.viewpoint = new Vec3i(viewpoint.getX(), surface_y + 1, viewpoint.getZ());
+                    //if no blocks are found in the column keep the original viewpoint
+                    if (surface_y != chunk.getBottomY())
+                        this.viewpoint = new Vec3i(viewpoint.getX(), surface_y + 1, viewpoint.getZ());
                 }
                 //save chunk
                 onPacket(new ChunkDataS2CPacket(worldChunk));
                 onPacket(new LightUpdateS2CPacket(pos, world.getLightingProvider(), null, null, true));
             }
         }
-
-        //register as world (dimension) event listeners
-        ((RegionRecorderWorld)world).getRegionRecorders().add(this);
-        //register as chunk watcher
-        this.region.includedChunks.forEach( p -> ((RegionRecorderWorld)world).getRegionRecordersByChunk().computeIfAbsent(p, c -> new LinkedHashSet<>()).add(this));
-        this.region.expandedChunks.forEach( p -> ((RegionRecorderWorld)world).getRegionRecordersByExpandedChunk().computeIfAbsent(p, c -> new LinkedHashSet<>()).add(this));
 
         //register as an entity watcher ( this will also send all the packets for spawning entities already in the region )
         ((RegionRecorderStorage)world.getChunkManager().threadedAnvilChunkStorage).registerRecorder(this);
