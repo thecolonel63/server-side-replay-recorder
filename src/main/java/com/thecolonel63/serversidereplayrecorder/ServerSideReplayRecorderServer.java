@@ -8,6 +8,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 import com.thecolonel63.serversidereplayrecorder.config.MainConfig;
 import com.thecolonel63.serversidereplayrecorder.recorder.PlayerRecorder;
 import com.thecolonel63.serversidereplayrecorder.util.StoppedReplayFixer;
+import io.netty.util.concurrent.DefaultThreadFactory;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.api.ModInitializer;
@@ -20,6 +21,9 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 
 @Environment(EnvType.SERVER)
 public class ServerSideReplayRecorderServer implements ModInitializer {
@@ -30,6 +34,8 @@ public class ServerSideReplayRecorderServer implements ModInitializer {
         builder.enable(YAMLGenerator.Feature.INDENT_ARRAYS_WITH_INDICATOR);
         yaml = new ObjectMapper(builder.build()).configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
+
+    public static final ExecutorService recorderExecutor = Executors.newSingleThreadExecutor(new DefaultThreadFactory("Replay",true));
 
     private static final ObjectMapper yaml;
 

@@ -26,6 +26,7 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
 
@@ -296,8 +297,14 @@ public class ReplayCommand {
                                                                                                                 if (recorder == null) {
                                                                                                                     ServerCommandSource source = context.getSource();
                                                                                                                     try {
-                                                                                                                        recorder = RegionRecorder.create(regionName, cpos1, cpos2, source.getWorld());
-                                                                                                                        source.sendFeedback(new LiteralText("Started Recording Region %s, from %d %d to %d %d".formatted(regionName, recorder.region.min.x, recorder.region.min.z, recorder.region.max.x, recorder.region.max.z)).formatted(Formatting.YELLOW), true);
+                                                                                                                        CompletableFuture<RegionRecorder> future = RegionRecorder.createAsync(regionName, cpos1, cpos2, source.getWorld());
+                                                                                                                        future.thenAcceptAsync(r -> source.sendFeedback(new LiteralText("Started Recording Region %s, from %d %d to %d %d".formatted(regionName, r.region.min.x, r.region.min.z, r.region.max.x, r.region.max.z)).formatted(Formatting.YELLOW), true),source.getServer());
+                                                                                                                        future.exceptionallyAsync(throwable -> {
+                                                                                                                            throwable.printStackTrace();
+                                                                                                                            context.getSource().sendError(new LiteralText("An Exception occurred while starting %s recording".formatted(regionName)).formatted(Formatting.RED));
+                                                                                                                            return null;
+                                                                                                                        }, source.getServer());
+                                                                                                                        source.sendFeedback(new LiteralText("Starting Region %s".formatted(regionName)).formatted(Formatting.YELLOW),true);
                                                                                                                         return 0;
                                                                                                                     } catch (
                                                                                                                             Throwable e) {
