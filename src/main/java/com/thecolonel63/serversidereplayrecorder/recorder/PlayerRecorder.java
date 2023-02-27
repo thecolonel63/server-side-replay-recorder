@@ -159,6 +159,7 @@ public class PlayerRecorder {
     }
 
     public synchronized void handleDisconnect() {
+        this.fileWriterExecutor.shutdownNow();
         synchronized (ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap) {
             //Player has disconnected, so remove our recorder from the map and close the output streams.
             ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap.remove(this.connection);
