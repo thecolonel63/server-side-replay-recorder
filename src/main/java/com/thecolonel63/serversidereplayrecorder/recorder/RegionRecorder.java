@@ -44,7 +44,12 @@ public class RegionRecorder extends PlayerRecorder {
         if (recorders.containsKey(regionName))
             return recorders.get(regionName);
         RegionRecorder recorder = new RegionRecorder(regionName, pos1, pos2, world);
-        recorder.init();
+        try {
+            recorder.init();
+        }catch (Throwable t){
+            recorder.handleDisconnect();
+            throw t;
+        }
         recorders.put(regionName, recorder);
         return recorder;
     }
@@ -90,18 +95,7 @@ public class RegionRecorder extends PlayerRecorder {
         this.playerSpawned = true;
     }
 
-    public void init(){
-        //skip the login Phase and start immediatly with the Game packets
-        onPacket(new LoginSuccessS2CPacket(FAKE_GAMEPROFILE));
-        //override the fake player name with the region name
-        this.playerName = regionName;
-
-        //register as world (dimension) event listeners
-        ((RegionRecorderWorld)world).getRegionRecorders().add(this);
-        //register as chunk watcher
-        this.region.includedChunks.forEach( p -> ((RegionRecorderWorld)world).getRegionRecordersByChunk().computeIfAbsent(p, c -> new LinkedHashSet<>()).add(this));
-        this.region.expandedChunks.forEach( p -> ((RegionRecorderWorld)world).getRegionRecordersByExpandedChunk().computeIfAbsent(p, c -> new LinkedHashSet<>()).add(this));
-
+    public void _syncInit(){
 
         WorldProperties worldProperties = world.getLevelProperties();
 
@@ -150,6 +144,25 @@ public class RegionRecorder extends PlayerRecorder {
             onPacket(new ResourcePackSendS2CPacket(ms.getResourcePackUrl(), ms.getResourcePackHash(), ms.requireResourcePack(), ms.getResourcePackPrompt()));
         }
 
+        //register as world (dimension) event listeners
+        ((RegionRecorderWorld) world).getRegionRecorders().add(this);
+        //register as chunk watcher
+        this.region.includedChunks.forEach(p -> ((RegionRecorderWorld) world).getRegionRecordersByChunk().computeIfAbsent(p, c -> new LinkedHashSet<>()).add(this));
+        this.region.expandedChunks.forEach(p -> ((RegionRecorderWorld) world).getRegionRecordersByExpandedChunk().computeIfAbsent(p, c -> new LinkedHashSet<>()).add(this));
+    }
+
+    public void init(){
+        //skip the login Phase and start immediatly with the Game packets
+        onPacket(new LoginSuccessS2CPacket(FAKE_GAMEPROFILE));
+        //override the fake player name with the region name
+        this.playerName = regionName;
+
+        if (Thread.currentThread() == world.getServer().getThread()){
+            this._syncInit();
+        }else{
+            CompletableFuture.runAsync(this::_syncInit,world.getServer()).join();
+        }
+
         //set the render distance center
         onPacket(new ChunkRenderDistanceCenterS2CPacket(this.region.center.x, this.region.center.z));
 
@@ -187,8 +200,15 @@ public class RegionRecorder extends PlayerRecorder {
             }
         }
 
-        //register as an entity watcher ( this will also send all the packets for spawning entities already in the region )
-        ((RegionRecorderStorage)world.getChunkManager().threadedAnvilChunkStorage).registerRecorder(this);
+        if (Thread.currentThread() == world.getServer().getThread()){
+            //register as an entity watcher ( this will also send all the packets for spawning entities already in the region )
+            ((RegionRecorderStorage)world.getChunkManager().threadedAnvilChunkStorage).registerRecorder(this);
+        }else{
+            CompletableFuture.runAsync(()->{
+                //register as an entity watcher ( this will also send all the packets for spawning entities already in the region )
+                ((RegionRecorderStorage)world.getChunkManager().threadedAnvilChunkStorage).registerRecorder(this);
+            },world.getServer()).join();
+        }
 
         //set the replay viewpoint to the center of the watched region
         onPacket(new PlayerPositionLookS2CPacket(viewpoint.getX() + 0.5,viewpoint.getY(),viewpoint.getZ() + 0.5,0,0, Collections.emptySet(),0,false));
@@ -203,7 +223,19 @@ public class RegionRecorder extends PlayerRecorder {
     }
 
     @Override
-    public void handleDisconnect() {
+    public synchronized void handleDisconnect() {
+        this.open = false;
+
+        if (Thread.currentThread() == world.getServer().getThread()){
+            _unRegister();
+        }else{
+            CompletableFuture.runAsync(this::_unRegister,world.getServer()).join();
+        }
+        super.handleDisconnect();
+        recorders.remove(regionName);
+    }
+
+    private void _unRegister() {
         ((RegionRecorderWorld)world).getRegionRecorders().remove(this);
         this.region.includedChunks.forEach( p -> Optional.ofNullable(((RegionRecorderWorld)world).getRegionRecordersByChunk().get(p)).ifPresent(s -> {
             s.remove(this);
@@ -215,8 +247,8 @@ public class RegionRecorder extends PlayerRecorder {
             if (s.isEmpty())
                 ((RegionRecorderWorld)world).getRegionRecordersByExpandedChunk().remove(p);
         }));
-        super.handleDisconnect();
-        recorders.remove(regionName);
+        //un-register as an entity watcher
+        ((RegionRecorderStorage)world.getChunkManager().threadedAnvilChunkStorage).registerRecorder(this);
     }
 
     @Override

@@ -227,7 +227,7 @@ public class ReplayCommand {
                                     if(!r_recorders.isEmpty()) {
                                         context.getSource().sendFeedback(new LiteralText("Region Recordings:").formatted(Formatting.YELLOW), true);
                                         r_recorders.forEach( r -> {
-                                            context.getSource().sendFeedback(new LiteralText("    %s: %s %s".formatted(r.regionName, r.world.getRegistryKey().getValue(), r.getUptime())).formatted(Formatting.YELLOW), true);
+                                            context.getSource().sendFeedback(new LiteralText("    %s: %s %s".formatted(r.regionName, r.world.getRegistryKey().getValue(), DurationFormatUtils.formatDurationHMS(r.getUptime().toMillis()))), true);
                                         });
                                     }
 

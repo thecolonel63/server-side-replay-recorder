@@ -31,7 +31,7 @@ public abstract class EntityTrackerMixin implements RegionRecorderEntityTracker 
         boolean spectator = false;
         if ( entity instanceof ServerPlayerEntity serverPlayerEntity )
             spectator = serverPlayerEntity.isSpectator();
-        if (recorder.region.isInBox(this.entity.getPos()) && !spectator){
+        if (recorder.isOpen() && recorder.region.isInBox(this.entity.getPos()) && !spectator){
             if (this.listenening_recorders.add(recorder)) {
                 this.startTracking(recorder);
             }

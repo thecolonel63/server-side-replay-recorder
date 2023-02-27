@@ -1,5 +1,6 @@
 package com.thecolonel63.serversidereplayrecorder.recorder;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.mojang.authlib.GameProfile;
@@ -34,6 +35,8 @@ import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class PlayerRecorder {
 
@@ -41,6 +44,7 @@ public class PlayerRecorder {
     public final ClientConnection connection;
     public final MinecraftServer ms = ServerSideReplayRecorderServer.server;
     protected final File tmp_folder;
+    protected final File recording_file;
 
     protected final BufferedOutputStream bos;
     protected final FileOutputStream fos;
@@ -62,6 +66,11 @@ public class PlayerRecorder {
     protected boolean wasSleeping;
     protected boolean open = true;
 
+    public boolean isOpen() {
+        return open;
+    }
+    protected ExecutorService fileWriterExecutor = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("Replay-Writer-%d").setDaemon(true).build());
+
     public String getFileName() {
         return fileName;
     }
@@ -70,7 +79,8 @@ public class PlayerRecorder {
     public PlayerRecorder(ClientConnection connection) throws IOException {
         tmp_folder = Paths.get(FabricLoader.getInstance().getGameDir().toString(), ServerSideReplayRecorderServer.config.getReplay_folder_name(), "recording_" + this.hashCode()).toFile();
         tmp_folder.mkdirs();
-        fos = new FileOutputStream(Paths.get(tmp_folder.getAbsolutePath(), "recording.tmcpr").toFile(), true);
+        recording_file= Paths.get(tmp_folder.getAbsolutePath(), "recording.tmcpr").toFile();
+        fos = new FileOutputStream(this.recording_file, false);
         bos = new BufferedOutputStream(fos);
         this.connection = connection;
     }
@@ -142,12 +152,10 @@ public class PlayerRecorder {
             GameProfile profile = ((LoginSuccessfulS2CPacketAccessor) loginSuccessS2CPacket).getProfile();
             playerId = profile.getId();
             playerName = profile.getName();
-        }/* else if (packet instanceof PlayerSpawnS2CPacket packet1) {
-            uuids.add(String.valueOf(packet1.getPlayerUuid())); //Broken, seems to be unused by the regular replay client.
-        }*/
+        }
 
-        timestamp = (int) (System.currentTimeMillis() - start);
-        save(packet);
+        this.timestamp = (int) (System.currentTimeMillis() - start);
+        save(packet, timestamp);
     }
 
     public synchronized void handleDisconnect() {
@@ -167,47 +175,73 @@ public class PlayerRecorder {
     }
 
     public synchronized void save(Packet<?> packet) {
+        this.save(packet, this.timestamp);
+    }
+
+    public synchronized void save(Packet<?> packet, long timestamp) {
+        //use a separate thread to write to file ( to not hang up the server )
+        this.fileWriterExecutor.execute(()->this._save(packet, timestamp));
+    }
+
+    public void _save(Packet<?> packet, long timestamp) {
         //shallow all packets if this recording is already closed
         if (! this.open)
             return;
+
+        //prevent filling storage ( causing server crash )
+        long remaining_space = recording_file.getUsableSpace();
+
+        long recording_dimension = recording_file.length();
+
+        if (remaining_space < recording_dimension){
+            ServerSideReplayRecorderServer.LOGGER.warn("Disk space is too low, stopping recording %s".formatted(this.playerName));
+            this.handleDisconnect();
+        }
+
         PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
         packet.write(buf);
+
         try {
+            synchronized (bos) {
+                //Write the timestamp and the amount of readable bytes, including an extra byte for the packet ID.
+                bos.write(intToByteArray((int)timestamp));
+                bos.write(intToByteArray(buf.readableBytes() + 1));
 
-            //Write the timestamp and the amount of readable bytes, including an extra byte for the packet ID.
-            bos.write(intToByteArray(timestamp));
-            bos.write(intToByteArray(buf.readableBytes() + 1));
+                //Get the packet ID
+                Integer packetId = state.getPacketId(NetworkSide.CLIENTBOUND, packet);
+                if (packet instanceof LoginSuccessS2CPacket) {
+                    packetId = 2; //Here because the connection state was already changed when the packet was first read, so trying to do the above *will* result in an error.
+                }
 
-            //Get the packet ID
-            Integer packetId = state.getPacketId(NetworkSide.CLIENTBOUND, packet);
-            if (packet instanceof LoginSuccessS2CPacket) {
-                packetId = 2; //Here because the connection state was already changed when the packet was first read, so trying to do the above *will* result in an error.
+                if (packetId == null) {
+                    //The packet ID is something we do not have an ID for.
+                    throw new IOException("Unknown packet ID for class " + packet.getClass());
+                } else {
+                    //Write the packet ID.
+                    bos.write(packetId);
+                }
+
+                //Write the packet.
+                bos.write(buf.array(), 0, buf.readableBytes());
+
+                if (!playerSpawned && packet instanceof PlayerListS2CPacket) {
+                    spawnRecordingPlayer();
+                }
+
+                if (!isRespawning && packet instanceof PlayerRespawnS2CPacket) {
+                    //Catches a dimension change that isn't technically a respawn, but should still be count as one.
+                    spawnRecordingPlayer();
+                }
+
+                writeMetaData(ServerSideReplayRecorderServer.config.getServer_name(), false);
             }
-
-            if (packetId == null) {
-                //The packet ID is something we do not have an ID for.
-                throw new IOException("Unknown packet ID for class " + packet.getClass());
-            } else {
-                //Write the packet ID.
-                bos.write(packetId);
-            }
-
-            //Write the packet.
-            bos.write(buf.array(), 0, buf.readableBytes());
-
-            if (!playerSpawned && packet instanceof PlayerListS2CPacket) {
-                spawnRecordingPlayer();
-            }
-
-            if (!isRespawning && packet instanceof PlayerRespawnS2CPacket) {
-                //Catches a dimension change that isn't technically a respawn, but should still be count as one.
-                spawnRecordingPlayer();
-            }
-
-            writeMetaData(ServerSideReplayRecorderServer.config.getServer_name(), false);
-
         } catch (IOException e) {
-            e.printStackTrace();
+            if (e.getMessage().equals("No space left on device")){
+                ServerSideReplayRecorderServer.LOGGER.warn("Disk space is too low, stopping recording %s".formatted(this.playerName));
+                this.handleDisconnect();
+            }else {
+                e.printStackTrace();
+            }
         }
     }
 
