@@ -10,15 +10,16 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.entity.player.PlayerAbilities;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.network.ClientConnection;
-import net.minecraft.network.NetworkSide;
+import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;
 import net.minecraft.network.packet.s2c.play.*;
-import net.minecraft.server.world.ServerChunkManager;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.collection.DefaultedList;
-import net.minecraft.util.math.*;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.ChunkPos;
+import net.minecraft.util.math.Vec3i;
 import net.minecraft.util.registry.DynamicRegistryManager;
 import net.minecraft.world.GameMode;
 import net.minecraft.world.GameRules;
@@ -26,23 +27,24 @@ import net.minecraft.world.Heightmap;
 import net.minecraft.world.WorldProperties;
 import net.minecraft.world.biome.source.BiomeAccess;
 import net.minecraft.world.border.WorldBorder;
-import net.minecraft.world.chunk.*;
+import net.minecraft.world.chunk.Chunk;
+import net.minecraft.world.chunk.ChunkStatus;
+import net.minecraft.world.chunk.ReadOnlyChunk;
+import net.minecraft.world.chunk.WorldChunk;
 
-import java.io.*;
+import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.Future;
-import java.util.function.Consumer;
 
-public class RegionRecorder extends PlayerRecorder {
+public class RegionRecorder extends ReplayRecorder {
 
-    public static final Map<String, RegionRecorder> recorders = new HashMap<>();
+    public static final Map<String, RegionRecorder> regionRecorderMap = new HashMap<>();
 
     public static RegionRecorder create(String regionName, ChunkPos pos1, ChunkPos pos2, ServerWorld world) throws IOException{
-        if (recorders.containsKey(regionName))
-            return recorders.get(regionName);
+        if (regionRecorderMap.containsKey(regionName))
+            return regionRecorderMap.get(regionName);
         RegionRecorder recorder = new RegionRecorder(regionName, pos1, pos2, world);
         try {
             recorder.init();
@@ -50,7 +52,7 @@ public class RegionRecorder extends PlayerRecorder {
             recorder.handleDisconnect();
             throw t;
         }
-        recorders.put(regionName, recorder);
+        regionRecorderMap.put(regionName, recorder);
         return recorder;
     }
 
@@ -77,22 +79,11 @@ public class RegionRecorder extends PlayerRecorder {
     public final ServerWorld world;
 
     private RegionRecorder(String regionName, ChunkPos pos1, ChunkPos pos2, ServerWorld world) throws IOException {
-        super(new ClientConnection(NetworkSide.SERVERBOUND){
-            @Override
-            public void disableAutoRead()
-            {
-            }
-
-            @Override
-            public void handleDisconnection()
-            {
-            }
-        });
+        super();
         this.regionName = regionName;
         this.region = new ChunkBox(pos1,pos2);
         this.viewpoint = new Vec3i(region.center.getCenterX(),(world.getBottomY() + world.getTopY())/2,region.center.getCenterZ());
         this.world = world;
-        this.playerSpawned = true;
     }
 
     public void _syncInit(){
@@ -151,11 +142,11 @@ public class RegionRecorder extends PlayerRecorder {
         this.region.expandedChunks.forEach(p -> ((RegionRecorderWorld) world).getRegionRecordersByExpandedChunk().computeIfAbsent(p, c -> new LinkedHashSet<>()).add(this));
     }
 
+    private boolean init_done = false;
+
     public void init(){
         //skip the login Phase and start immediatly with the Game packets
         onPacket(new LoginSuccessS2CPacket(FAKE_GAMEPROFILE));
-        //override the fake player name with the region name
-        this.playerName = regionName;
 
         if (Thread.currentThread() == world.getServer().getThread()){
             this._syncInit();
@@ -214,6 +205,20 @@ public class RegionRecorder extends PlayerRecorder {
         onPacket(new PlayerPositionLookS2CPacket(viewpoint.getX() + 0.5,viewpoint.getY(),viewpoint.getZ() + 0.5,0,0, Collections.emptySet(),0,false));
 
         //ready to record changes
+        this.init_done = true;
+    }
+
+    @Override
+    public synchronized void onPacket(Packet<?> packet) {
+        if(this.init_done && packet instanceof LightUpdateS2CPacket){
+            return;
+        }
+        super.onPacket(packet);
+    }
+
+    @Override
+    public String getRecordingName() {
+        return this.regionName;
     }
 
     @Override
@@ -224,7 +229,7 @@ public class RegionRecorder extends PlayerRecorder {
 
     @Override
     public synchronized void handleDisconnect() {
-        this.open = false;
+        regionRecorderMap.remove(regionName);
 
         if (Thread.currentThread() == world.getServer().getThread()){
             _unRegister();
@@ -232,7 +237,6 @@ public class RegionRecorder extends PlayerRecorder {
             CompletableFuture.runAsync(this::_unRegister,world.getServer()).join();
         }
         super.handleDisconnect();
-        recorders.remove(regionName);
     }
 
     private void _unRegister() {
@@ -249,11 +253,6 @@ public class RegionRecorder extends PlayerRecorder {
         }));
         //un-register as an entity watcher
         ((RegionRecorderStorage)world.getChunkManager().threadedAnvilChunkStorage).registerRecorder(this);
-    }
-
-    @Override
-    public int hashCode() {
-        return (this.regionName==null)?super.hashCode():this.regionName.hashCode();
     }
 
     @Override

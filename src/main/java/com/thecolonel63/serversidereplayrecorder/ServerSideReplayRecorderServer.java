@@ -13,17 +13,14 @@ import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.network.ClientConnection;
 import net.minecraft.server.MinecraftServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 
 @Environment(EnvType.SERVER)
 public class ServerSideReplayRecorderServer implements ModInitializer {
@@ -43,8 +40,6 @@ public class ServerSideReplayRecorderServer implements ModInitializer {
 
 
     //TODO: swap the maps with Apache Caches with either Soft or Weak keys and values to prevent memory leaks
-
-    public static final Map<ClientConnection, PlayerRecorder> connectionPlayerThreadRecorderMap = new ConcurrentHashMap<>();
 
     public static MinecraftServer server;
 
@@ -129,8 +124,8 @@ public class ServerSideReplayRecorderServer implements ModInitializer {
     }
 
     public static void tick() {
-        synchronized (ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap) {
-            connectionPlayerThreadRecorderMap.forEach((connection, playerThreadRecorder) -> {
+        synchronized (PlayerRecorder.playerRecorderMap) {
+            PlayerRecorder.playerRecorderMap.forEach((connection, playerThreadRecorder) -> {
                 //Initiate the saving process of what isn't automatically saved.
                 playerThreadRecorder.onPlayerTick();
             });

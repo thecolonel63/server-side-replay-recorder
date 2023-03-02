@@ -22,25 +22,25 @@ public class PlayerManagerMixin {
     @Redirect(method = "onPlayerConnect", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/PlayerManager;sendToAll(Lnet/minecraft/network/Packet;)V"))
     void handleNewPlayer(PlayerManager instance, Packet<?> packet){
         instance.sendToAll(packet);
-        RegionRecorder.recorders.values().forEach( r -> r.onPacket(packet));
+        RegionRecorder.regionRecorderMap.values().forEach(r -> r.onPacket(packet));
     }
 
     @Inject(method = "broadcastChatMessage", at= @At("HEAD"))
     void handleBroadcast(Text message, MessageType type, UUID sender, CallbackInfo ci){
-        RegionRecorder.recorders.values().forEach( r -> r.onPacket(new GameMessageS2CPacket(message, type, sender)));
+        RegionRecorder.regionRecorderMap.values().forEach(r -> r.onPacket(new GameMessageS2CPacket(message, type, sender)));
     }
 
     @Inject(method = "sendToOtherTeams", at= @At("HEAD"))
     void handleOtherTeamMessage(PlayerEntity source, Text message, CallbackInfo ci){
         AbstractTeam abstractTeam = source.getScoreboardTeam();
         if (abstractTeam != null) {
-            RegionRecorder.recorders.values().forEach(r -> r.onPacket(new GameMessageS2CPacket(message, MessageType.SYSTEM, source.getUuid())));
+            RegionRecorder.regionRecorderMap.values().forEach(r -> r.onPacket(new GameMessageS2CPacket(message, MessageType.SYSTEM, source.getUuid())));
         }
     }
 
     @Redirect(method = "remove", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/PlayerManager;sendToAll(Lnet/minecraft/network/Packet;)V"))
     void handlePlayerDisconnectPlayer(PlayerManager instance, Packet<?> packet){
         instance.sendToAll(packet);
-        RegionRecorder.recorders.values().forEach( r -> r.onPacket(packet));
+        RegionRecorder.regionRecorderMap.values().forEach(r -> r.onPacket(packet));
     }
 }

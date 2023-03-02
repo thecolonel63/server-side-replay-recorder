@@ -14,7 +14,7 @@ public class EntityPlayerMPFakeMixin {
     @Redirect(method = "createShadow", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/PlayerManager;sendToAll(Lnet/minecraft/network/Packet;)V"))
     static void handleShadowPlayer(PlayerManager instance, Packet<?> packet){
         instance.sendToAll(packet);
-        RegionRecorder.recorders.values().forEach(r -> r.onPacket(packet));
+        RegionRecorder.regionRecorderMap.values().forEach(r -> r.onPacket(packet));
     }
 
 }

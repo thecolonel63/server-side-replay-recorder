@@ -1,23 +1,16 @@
 package com.thecolonel63.serversidereplayrecorder.recorder;
 
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Pair;
-import com.thecolonel63.serversidereplayrecorder.mixin.main.LoginSuccessfulS2CPacketAccessor;
 import com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer;
-import com.thecolonel63.serversidereplayrecorder.util.FileHandlingUtility;
-import io.netty.buffer.Unpooled;
+import com.thecolonel63.serversidereplayrecorder.mixin.main.LoginSuccessfulS2CPacketAccessor;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.MinecraftVersion;
-import net.minecraft.SharedConstants;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.network.*;
-import net.minecraft.network.packet.s2c.login.LoginCompressionS2CPacket;
+import net.minecraft.network.ClientConnection;
+import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;
 import net.minecraft.network.packet.s2c.play.*;
 import net.minecraft.server.MinecraftServer;
@@ -27,239 +20,77 @@ import net.minecraft.sound.SoundEvent;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 
-import java.io.*;
-import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
+import java.io.IOException;
 import java.nio.file.Paths;
-import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ConcurrentHashMap;
 
-public class PlayerRecorder {
-
+public class PlayerRecorder extends ReplayRecorder {
     public static final String PLAYER_FOLDER = "player";
+    public static final Map<ClientConnection, PlayerRecorder> playerRecorderMap = new ConcurrentHashMap<>();
     public final ClientConnection connection;
-    public final MinecraftServer ms = ServerSideReplayRecorderServer.server;
-    protected final File tmp_folder;
-    protected final File recording_file;
-
-    protected final BufferedOutputStream bos;
-    protected final FileOutputStream fos;
     protected final ItemStack[] playerItems = new ItemStack[6];
-    protected final JsonArray uuids = new JsonArray();
     public UUID playerId;
     public String playerName;
     public boolean isRespawning;
-    protected long start;
-    protected String fileName;
-    protected NetworkState state = NetworkState.LOGIN;
-    protected int timestamp;
-    protected boolean startedRecording = false;
     protected boolean playerSpawned = false;
     protected Double lastX, lastY, lastZ;
     protected int ticksSinceLastCorrection;
     protected Integer rotationYawHeadBefore;
     protected int lastRiding = -1;
     protected boolean wasSleeping;
-    protected boolean open = true;
 
-    public boolean isOpen() {
-        return open;
-    }
-    protected ExecutorService fileWriterExecutor = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("Replay-Writer-%d").setDaemon(true).build());
-
-    public String getFileName() {
-        return fileName;
-    }
-
-    @SuppressWarnings("ResultOfMethodCallIgnored")
     public PlayerRecorder(ClientConnection connection) throws IOException {
-        tmp_folder = Paths.get(FabricLoader.getInstance().getGameDir().toString(), ServerSideReplayRecorderServer.config.getReplay_folder_name(), "recording_" + this.hashCode()).toFile();
-        tmp_folder.mkdirs();
-        recording_file= Paths.get(tmp_folder.getAbsolutePath(), "recording.tmcpr").toFile();
-        fos = new FileOutputStream(this.recording_file, false);
-        bos = new BufferedOutputStream(fos);
+        super();
         this.connection = connection;
     }
 
-    protected void writeMetaData(String serverName, boolean isFinishing) {
-        try {
-            JsonObject object = new JsonObject();
-            object.addProperty("singleplayer", false);
-            object.addProperty("serverName", serverName);
-            object.addProperty("customServerName", serverName + "|" + playerName);
-            object.addProperty("duration", timestamp);
-            object.addProperty("date", start);
-            object.addProperty("mcversion", MinecraftVersion.GAME_VERSION.getName());
-            object.addProperty("fileFormat", "MCPR");
-            object.addProperty("fileFormatVersion", 14); //Unlikely to change any time soon, last time this was updates was several major versions ago.
-            object.addProperty("protocol", SharedConstants.getProtocolVersion());
-            object.addProperty("generator", "mattymatty's enhanced thecolonel63's Server Side Replay Recorder");
-            object.addProperty("selfId", -1);
-            object.add("players", uuids);
-            FileWriter fw = new FileWriter(tmp_folder + "/metaData.json", false);
-            BufferedWriter bw = new BufferedWriter(fw);
-            bw.write(object.toString());
-            bw.close();
-            fw.close();
-            if (isFinishing) compressReplay();
-        } catch (IOException ioException) {
-            ioException.printStackTrace();
-        }
+    @Override
+    public String getRecordingName() {
+        return this.playerName;
     }
-    
+
+    @Override
     protected String getSaveFolder(){
         String name = (playerName != null) ? playerName : "NONAME";
         return Paths.get(FabricLoader.getInstance().getGameDir().toString(), ServerSideReplayRecorderServer.config.getReplay_folder_name(), PLAYER_FOLDER,name).toString();
     }
 
-    @SuppressWarnings("ResultOfMethodCallIgnored")
-    protected void compressReplay() {
-
-
-        File output = Paths.get(this.getSaveFolder(),fileName).toFile();
-        ArrayList<File> filesToCompress = new ArrayList<>() {{
-            add(new File(tmp_folder + "/metaData.json"));
-            add(new File(tmp_folder + "/recording.tmcpr"));
-        }};
-
-        output.getParentFile().mkdirs();
-
-        try {
-            FileHandlingUtility.zip(filesToCompress, output.getAbsolutePath(), true, tmp_folder);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-    }
 
     public void onPacket(Packet<?> packet) {
-        if (!startedRecording) {
-            start = System.currentTimeMillis(); //More accurate timestamps.
-            Date time = new Date(start);
-            fileName = String.format("%s.mcpr", new SimpleDateFormat("yyyy-M-dd_HH-mm-ss").format(time));
-            startedRecording = true;
+        if (!playerSpawned && packet instanceof PlayerListS2CPacket) {
+            spawnRecordingPlayer();
         }
 
-        if (packet instanceof LoginCompressionS2CPacket) {
-            return; //We don't compress anything in replays, so ignore the packet.
-        } else if (packet instanceof LoginSuccessS2CPacket loginSuccessS2CPacket) {
-            state = NetworkState.PLAY; //We are now dealing with "playing" packets, so set the network state accordingly.
-            //Also, set the profile for use in fixing.
+        if (!isRespawning && packet instanceof PlayerRespawnS2CPacket) {
+            //Catches a dimension change that isn't technically a respawn, but should still be count as one.
+            spawnRecordingPlayer();
+        }
+        super.onPacket(packet);
+        if (packet instanceof LoginSuccessS2CPacket loginSuccessS2CPacket) {
             GameProfile profile = ((LoginSuccessfulS2CPacketAccessor) loginSuccessS2CPacket).getProfile();
             playerId = profile.getId();
             playerName = profile.getName();
         }
-
-        this.timestamp = (int) (System.currentTimeMillis() - start);
-        save(packet, timestamp);
     }
 
+    @Override
     public synchronized void handleDisconnect() {
-        this.fileWriterExecutor.shutdownNow();
-        synchronized (ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap) {
+        synchronized (playerRecorderMap) {
             //Player has disconnected, so remove our recorder from the map and close the output streams.
-            ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap.remove(this.connection);
-            try {
-                this.open = false;
-                bos.close();
-                fos.close();
-                Thread savingThread = new Thread(() -> writeMetaData(ServerSideReplayRecorderServer.config.getServer_name(), true));
-                savingThread.start();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            playerRecorderMap.remove(this.connection);
         }
+        super.handleDisconnect();
     }
-
-    public synchronized void save(Packet<?> packet) {
-        this.save(packet, this.timestamp);
-    }
-
-    public synchronized void save(Packet<?> packet, long timestamp) {
-        //use a separate thread to write to file ( to not hang up the server )
-        this.fileWriterExecutor.execute(()->this._save(packet, timestamp));
-    }
-
-    public void _save(Packet<?> packet, long timestamp) {
-        //shallow all packets if this recording is already closed
-        if (! this.open)
-            return;
-
-        //prevent filling storage ( causing server crash )
-        long remaining_space = recording_file.getUsableSpace();
-
-        long recording_dimension = recording_file.length();
-
-        if (remaining_space < recording_dimension){
-            ServerSideReplayRecorderServer.LOGGER.warn("Disk space is too low, stopping recording %s".formatted(this.playerName));
-            this.handleDisconnect();
-        }
-
-        PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
-        packet.write(buf);
-
-        try {
-            synchronized (bos) {
-                //Write the timestamp and the amount of readable bytes, including an extra byte for the packet ID.
-                bos.write(intToByteArray((int)timestamp));
-                bos.write(intToByteArray(buf.readableBytes() + 1));
-
-                //Get the packet ID
-                Integer packetId = state.getPacketId(NetworkSide.CLIENTBOUND, packet);
-                if (packet instanceof LoginSuccessS2CPacket) {
-                    packetId = 2; //Here because the connection state was already changed when the packet was first read, so trying to do the above *will* result in an error.
-                }
-
-                if (packetId == null) {
-                    //The packet ID is something we do not have an ID for.
-                    throw new IOException("Unknown packet ID for class " + packet.getClass());
-                } else {
-                    //Write the packet ID.
-                    bos.write(packetId);
-                }
-
-                //Write the packet.
-                bos.write(buf.array(), 0, buf.readableBytes());
-
-                if (!playerSpawned && packet instanceof PlayerListS2CPacket) {
-                    spawnRecordingPlayer();
-                }
-
-                if (!isRespawning && packet instanceof PlayerRespawnS2CPacket) {
-                    //Catches a dimension change that isn't technically a respawn, but should still be count as one.
-                    spawnRecordingPlayer();
-                }
-
-                writeMetaData(ServerSideReplayRecorderServer.config.getServer_name(), false);
-            }
-        } catch (IOException e) {
-            if (e.getMessage().equals("No space left on device")){
-                ServerSideReplayRecorderServer.LOGGER.warn("Disk space is too low, stopping recording %s".formatted(this.playerName));
-                this.handleDisconnect();
-            }else {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    protected byte[] intToByteArray(int input) {
-        //Takes an int, gives back the int as a byte array.
-        ByteBuffer x = ByteBuffer.allocate(4);
-        x.order(ByteOrder.BIG_ENDIAN);
-        x.putInt(input);
-        return x.array();
-    }
-
+    
     public void spawnRecordingPlayer() {
         try {
             ServerPlayerEntity player = ms.getPlayerManager().getPlayer(playerId);
             if (player == null) return;
-            save(new PlayerSpawnS2CPacket(player));
-            save(new EntityTrackerUpdateS2CPacket(player.getId(), player.getDataTracker(), false));
+            onPacket(new PlayerSpawnS2CPacket(player));
+            onPacket(new EntityTrackerUpdateS2CPacket(player.getId(), player.getDataTracker(), false));
             playerSpawned = true;
             lastX = lastY = lastZ = null;
         } catch (Exception e) {
@@ -312,21 +143,21 @@ public class PlayerRecorder {
                 packet = new EntityS2CPacket.RotateAndMoveRelative(player.getId(), (short) Math.round(dx * 4096), (short) Math.round(dy * 4096), (short) Math.round(dz * 4096), newYaw, newPitch, player.isOnGround());
             }
 
-            save(packet);
+            onPacket(packet);
 
             //Update player rotation
             int rotationYawHead = ((int) (player.headYaw * 256.0F / 360.0F));
             if (!Objects.equals(rotationYawHead, rotationYawHeadBefore)) {
-                save(new EntitySetHeadYawS2CPacket(player, (byte) rotationYawHead));
+                onPacket(new EntitySetHeadYawS2CPacket(player, (byte) rotationYawHead));
                 rotationYawHeadBefore = rotationYawHead;
             }
 
             //Update player velocity
-            save(new EntityVelocityUpdateS2CPacket(player.getId(), player.getVelocity()));
+            onPacket(new EntityVelocityUpdateS2CPacket(player.getId(), player.getVelocity()));
 
             //Update player hand swinging and other animations.
             if (player.handSwinging && player.handSwingTicks == 0) {
-                save(new EntityAnimationS2CPacket(
+                onPacket(new EntityAnimationS2CPacket(
                         player, player.preferredHand == Hand.MAIN_HAND ? 0 : 3
                 ));
             }
@@ -343,7 +174,7 @@ public class PlayerRecorder {
                     needsToUpdate = true;
                 }
                 if (needsToUpdate) {
-                    save(new EntityEquipmentUpdateS2CPacket(player.getId(), equipment));
+                    onPacket(new EntityEquipmentUpdateS2CPacket(player.getId(), equipment));
                 }
             }
 
@@ -352,7 +183,7 @@ public class PlayerRecorder {
             int vehicleId = vehicle == null ? -1 : vehicle.getId();
             if (lastRiding != vehicleId) {
                 lastRiding = vehicleId;
-                save(new EntityAttachS2CPacket(
+                onPacket(new EntityAttachS2CPacket(
                         //#if MC<10904
                         //$$ 0,
                         //#endif
@@ -363,7 +194,7 @@ public class PlayerRecorder {
 
             //Sleeping
             if (!player.isSleeping() && wasSleeping) {
-                save(new EntityAnimationS2CPacket(player, 2));
+                onPacket(new EntityAnimationS2CPacket(player, 2));
                 wasSleeping = false;
             }
 
@@ -375,7 +206,7 @@ public class PlayerRecorder {
     public void onClientSound(SoundEvent sound, SoundCategory category, double x, double y, double z, float volume, float pitch) {
         try {
             // Send to all other players in ServerWorldEventHandler#playSoundToAllNearExcept
-            save(new PlaySoundS2CPacket(sound, category, x, y, z, volume, pitch));
+            onPacket(new PlaySoundS2CPacket(sound, category, x, y, z, volume, pitch));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -384,7 +215,7 @@ public class PlayerRecorder {
     public void onClientEffect(int type, BlockPos pos, int data) {
         try {
             // Send to all other players in ServerWorldEventHandler#playEvent
-            save(new WorldEventS2CPacket(type, pos, data, false));
+            onPacket(new WorldEventS2CPacket(type, pos, data, false));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -394,7 +225,7 @@ public class PlayerRecorder {
         if (playerId == null) return;
         PlayerEntity thePlayer = ms.getPlayerManager().getPlayer(playerId);
         if (thePlayer != null && breakerId == thePlayer.getId()) {
-            save(new BlockBreakingProgressS2CPacket(breakerId, pos, progress));
+            onPacket(new BlockBreakingProgressS2CPacket(breakerId, pos, progress));
         }
     }
 

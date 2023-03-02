@@ -23,7 +23,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import java.io.IOException;
 import java.util.List;
 
-import static com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap;
+import static com.thecolonel63.serversidereplayrecorder.recorder.PlayerRecorder.playerRecorderMap;
 
 @Mixin(PlayerManager.class)
 public abstract class PlayerManagerMixin {
@@ -37,7 +37,7 @@ public abstract class PlayerManagerMixin {
 
     @Inject(method = "onPlayerConnect", at= @At("HEAD"))
     private void onConnect(ClientConnection connection, ServerPlayerEntity player, CallbackInfo ci){
-        if (!connectionPlayerThreadRecorderMap.containsKey(connection)
+        if (!playerRecorderMap.containsKey(connection)
                 && ServerSideReplayRecorderServer.config.getRecordable_users().contains(player.getGameProfile().getName()) && ServerSideReplayRecorderServer.config.isRecording_enabled()) {
             try {
                 ServerSideReplayRecorderServer.LOGGER.info("Started Recording Player %s".formatted(player.getGameProfile().getName()));
@@ -46,7 +46,7 @@ public abstract class PlayerManagerMixin {
                     p.sendMessage(new LiteralText("Started Recording Player %s".formatted(player.getGameProfile().getName())).formatted(Formatting.GOLD), MessageType.SYSTEM, Util.NIL_UUID);
                 });
                 PlayerRecorder recorder = new PlayerRecorder(connection);
-                ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap.put(connection, recorder);
+                PlayerRecorder.playerRecorderMap.put(connection, recorder);
                 recorder.onPacket(new LoginSuccessS2CPacket(player.getGameProfile()));
             } catch (IOException e) {
                 e.printStackTrace();
@@ -62,8 +62,8 @@ public abstract class PlayerManagerMixin {
 
     @Inject(method = "respawnPlayer", at = @At("HEAD"))
     private void setRespawning(ServerPlayerEntity player, boolean alive, CallbackInfoReturnable<ServerPlayerEntity> cir) {
-        synchronized (ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap) {
-            ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap.forEach(((connection, playerThreadRecorder) -> {
+        synchronized (PlayerRecorder.playerRecorderMap) {
+            PlayerRecorder.playerRecorderMap.forEach(((connection, playerThreadRecorder) -> {
                 if (player != null && playerThreadRecorder.playerId.equals(player.getUuid())) {
                     playerThreadRecorder.isRespawning = true;
                 }
@@ -73,8 +73,8 @@ public abstract class PlayerManagerMixin {
 
     @Inject(method = "respawnPlayer", at = @At("TAIL"))
     private void respawnPlayer(ServerPlayerEntity player, boolean alive, CallbackInfoReturnable<ServerPlayerEntity> cir) {
-        synchronized (ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap) {
-            ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap.forEach((connection, playerThreadRecorder) -> {
+        synchronized (PlayerRecorder.playerRecorderMap) {
+            PlayerRecorder.playerRecorderMap.forEach((connection, playerThreadRecorder) -> {
                 if (player != null && playerThreadRecorder.playerId.equals(player.getUuid())) {
                     playerThreadRecorder.spawnRecordingPlayer();
                     playerThreadRecorder.isRespawning = false;

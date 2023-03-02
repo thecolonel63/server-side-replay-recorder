@@ -20,6 +20,6 @@ public abstract class ServerPlayNetworkHandlerMixin {
 
     @Inject(method = "handleMessage", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/PlayerManager;broadcast(Lnet/minecraft/text/Text;Ljava/util/function/Function;Lnet/minecraft/network/MessageType;Ljava/util/UUID;)V"), locals = LocalCapture.CAPTURE_FAILHARD)
     void handleChatMessage(TextStream.Message message, CallbackInfo ci, String string, Text text, Text text2){
-        RegionRecorder.recorders.values().forEach(r -> r.onPacket(new GameMessageS2CPacket(text2, MessageType.CHAT, this.getPlayer().getUuid())));
+        RegionRecorder.regionRecorderMap.values().forEach(r -> r.onPacket(new GameMessageS2CPacket(text2, MessageType.CHAT, this.getPlayer().getUuid())));
     }
 }

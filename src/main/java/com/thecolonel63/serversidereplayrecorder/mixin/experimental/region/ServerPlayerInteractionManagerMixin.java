@@ -14,7 +14,7 @@ public class ServerPlayerInteractionManagerMixin {
     @Redirect(method = "setGameMode", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/PlayerManager;sendToAll(Lnet/minecraft/network/Packet;)V"))
     void handlePlayerGamemode(PlayerManager instance, Packet<?> packet){
         instance.sendToAll(packet);
-        RegionRecorder.recorders.values().forEach(r -> r.onPacket(packet));
+        RegionRecorder.regionRecorderMap.values().forEach(r -> r.onPacket(packet));
     }
 
 

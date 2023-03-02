@@ -1,6 +1,6 @@
 package com.thecolonel63.serversidereplayrecorder.mixin.main;
 
-import com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer;
+import com.thecolonel63.serversidereplayrecorder.recorder.PlayerRecorder;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import org.spongepowered.asm.mixin.Mixin;
@@ -15,8 +15,8 @@ public class RenderGlobalMixin {
 
     @Inject(method = "setBlockBreakingInfo", at = @At("TAIL"))
     private void saveBlockBreakingProgressPacket(int entityId, BlockPos pos, int progress, CallbackInfo ci) {
-        synchronized (ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap) {
-            ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap.forEach((connection, playerThreadRecorder) -> {
+        synchronized (PlayerRecorder.playerRecorderMap) {
+            PlayerRecorder.playerRecorderMap.forEach((connection, playerThreadRecorder) -> {
                 playerThreadRecorder.onBlockBreakAnim(entityId, pos, progress);
             });
         }

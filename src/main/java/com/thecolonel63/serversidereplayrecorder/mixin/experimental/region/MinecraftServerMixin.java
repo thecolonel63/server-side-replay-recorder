@@ -1,5 +1,7 @@
 package com.thecolonel63.serversidereplayrecorder.mixin.experimental.region;
 
+import com.thecolonel63.serversidereplayrecorder.recorder.PlayerRecorder;
+import com.thecolonel63.serversidereplayrecorder.recorder.ReplayRecorder;
 import com.thecolonel63.serversidereplayrecorder.util.interfaces.RegionRecorderWorld;
 import net.minecraft.network.packet.s2c.play.WorldTimeUpdateS2CPacket;
 import net.minecraft.server.MinecraftServer;
