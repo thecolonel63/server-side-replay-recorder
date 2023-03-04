@@ -3,6 +3,8 @@ package com.thecolonel63.serversidereplayrecorder.recorder;
 import com.mojang.authlib.GameProfile;
 import com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer;
 import com.thecolonel63.serversidereplayrecorder.util.ChunkBox;
+import com.thecolonel63.serversidereplayrecorder.util.WrappedPacket;
+import com.thecolonel63.serversidereplayrecorder.util.interfaces.LightUpdatePacketAccessor;
 import com.thecolonel63.serversidereplayrecorder.util.interfaces.RegionRecorderStorage;
 import com.thecolonel63.serversidereplayrecorder.util.interfaces.RegionRecorderWorld;
 import io.netty.buffer.Unpooled;
@@ -14,7 +16,6 @@ import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;
 import net.minecraft.network.packet.s2c.play.*;
-import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.BlockPos;
@@ -48,11 +49,11 @@ public class RegionRecorder extends ReplayRecorder {
         RegionRecorder recorder = new RegionRecorder(regionName, pos1, pos2, world);
         try {
             recorder.init();
+            regionRecorderMap.put(regionName, recorder);
         }catch (Throwable t){
             recorder.handleDisconnect();
             throw t;
         }
-        regionRecorderMap.put(regionName, recorder);
         return recorder;
     }
 
@@ -74,6 +75,8 @@ public class RegionRecorder extends ReplayRecorder {
 
     public final ChunkBox region;
 
+    public final Set<ChunkPos> known_chunk_data = new HashSet<>();
+    public final Set<ChunkPos> known_chunk_light = new HashSet<>();
     protected Vec3i viewpoint;
 
     public final ServerWorld world;
@@ -142,12 +145,12 @@ public class RegionRecorder extends ReplayRecorder {
         this.region.expandedChunks.forEach(p -> ((RegionRecorderWorld) world).getRegionRecordersByExpandedChunk().computeIfAbsent(p, c -> new LinkedHashSet<>()).add(this));
     }
 
-    private boolean init_done = false;
-
     public void init(){
         //skip the login Phase and start immediatly with the Game packets
         onPacket(new LoginSuccessS2CPacket(FAKE_GAMEPROFILE));
 
+
+        //this code is mandatory to be run in the Main Server Thread
         if (Thread.currentThread() == world.getServer().getThread()){
             this._syncInit();
         }else{
@@ -163,6 +166,7 @@ public class RegionRecorder extends ReplayRecorder {
         //load all watched chunks data
         for (ChunkPos pos : this.region.expandedChunks ){
             //get chunk, load if needed, no create
+            //this call is deferred to the MainServer executor which runs at the end of a tick in the spare time
             Chunk chunk = world.getChunk(pos.x,pos.z, ChunkStatus.EMPTY);
             WorldChunk worldChunk = null;
             if (chunk instanceof  WorldChunk)
@@ -186,17 +190,19 @@ public class RegionRecorder extends ReplayRecorder {
                         this.viewpoint = new Vec3i(viewpoint.getX(), surface_y + 1, viewpoint.getZ());
                 }
                 //save chunk
-                onPacket(new ChunkDataS2CPacket(worldChunk));
-                onPacket(new LightUpdateS2CPacket(pos, world.getLightingProvider(), null, null, true));
+                onPacket(new WrappedPacket(new ChunkDataS2CPacket(worldChunk)));
+                onPacket(new WrappedPacket(new LightUpdateS2CPacket(pos, world.getLightingProvider(), null, null, true)));
+                known_chunk_data.add(pos);
+                known_chunk_light.add(pos);
             }
         }
 
+        //register as an entity watcher ( this will also send all the packets for spawning entities already in the region )
+        //this code is mandatory to be run in the Main Server Thread
         if (Thread.currentThread() == world.getServer().getThread()){
-            //register as an entity watcher ( this will also send all the packets for spawning entities already in the region )
             ((RegionRecorderStorage)world.getChunkManager().threadedAnvilChunkStorage).registerRecorder(this);
         }else{
             CompletableFuture.runAsync(()->{
-                //register as an entity watcher ( this will also send all the packets for spawning entities already in the region )
                 ((RegionRecorderStorage)world.getChunkManager().threadedAnvilChunkStorage).registerRecorder(this);
             },world.getServer()).join();
         }
@@ -205,13 +211,33 @@ public class RegionRecorder extends ReplayRecorder {
         onPacket(new PlayerPositionLookS2CPacket(viewpoint.getX() + 0.5,viewpoint.getY(),viewpoint.getZ() + 0.5,0,0, Collections.emptySet(),0,false));
 
         //ready to record changes
-        this.init_done = true;
     }
 
     @Override
     public synchronized void onPacket(Packet<?> packet) {
-        if(this.init_done && packet instanceof LightUpdateS2CPacket){
-            return;
+        if(ServerSideReplayRecorderServer.config.isAssume_unloaded_chunks_dont_change()){
+            if(packet instanceof ChunkDataS2CPacket newChunk) {
+                ChunkPos pos = new ChunkPos(newChunk.getX(), newChunk.getZ());
+                if (known_chunk_data.contains(pos))
+                    return; //skip chunk data as it was already recorded previously
+                else
+                    known_chunk_data.add(pos);
+
+            } else if (packet instanceof UnloadChunkS2CPacket) {
+                return; //this is always ignored by clients but better be safe
+
+            } else if (packet instanceof LightUpdateS2CPacket lightUpdateS2CPacket){
+                if(((LightUpdatePacketAccessor)lightUpdateS2CPacket).isOnChunkLoad()){
+                    ChunkPos pos = new ChunkPos(lightUpdateS2CPacket.getChunkX(),lightUpdateS2CPacket.getChunkZ());
+                    //be sure to record new chunk light packets
+                    //skip light data as it was already recorded previously
+                    if (!known_chunk_data.contains(pos)){
+                        packet = new WrappedPacket(packet);
+                        known_chunk_data.add(pos);
+                    }
+                }
+
+            }
         }
         super.onPacket(packet);
     }
@@ -231,11 +257,13 @@ public class RegionRecorder extends ReplayRecorder {
     public synchronized void handleDisconnect() {
         regionRecorderMap.remove(regionName);
 
+        //be sure to run the code inside the Main server thread
         if (Thread.currentThread() == world.getServer().getThread()){
             _unRegister();
         }else{
             CompletableFuture.runAsync(this::_unRegister,world.getServer()).join();
         }
+
         super.handleDisconnect();
     }
 

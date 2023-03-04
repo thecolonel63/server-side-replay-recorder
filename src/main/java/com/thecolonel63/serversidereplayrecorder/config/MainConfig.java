@@ -17,7 +17,8 @@ public class MainConfig {
     private String server_name = "My Server";
     private Set<String> recordable_users = new HashSet<>();
     private boolean recording_enabled = false;
-    private boolean use_server_timestamps = false;
+    private boolean use_server_timestamps = true;
+    private boolean assume_unloaded_chunks_dont_change = true;
     private long  max_file_size = 10000000000L;
     private URL file_storage_url;
     private boolean debug = false;
@@ -27,6 +28,14 @@ public class MainConfig {
             file_storage_url = new URL("https://tmpfiles.org/api/v1/upload");
         } catch (Throwable ignored) {
         }
+    }
+
+    public boolean isAssume_unloaded_chunks_dont_change() {
+        return assume_unloaded_chunks_dont_change;
+    }
+
+    public void setAssume_unloaded_chunks_dont_change(boolean assume_unloaded_chunks_dont_change) {
+        this.assume_unloaded_chunks_dont_change = assume_unloaded_chunks_dont_change;
     }
 
     public boolean isDebug() {

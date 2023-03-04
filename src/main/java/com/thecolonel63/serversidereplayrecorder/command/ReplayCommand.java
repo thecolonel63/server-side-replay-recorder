@@ -7,6 +7,7 @@ import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer;
 import com.thecolonel63.serversidereplayrecorder.recorder.PlayerRecorder;
 import com.thecolonel63.serversidereplayrecorder.recorder.RegionRecorder;
+import com.thecolonel63.serversidereplayrecorder.recorder.ReplayRecorder;
 import com.thecolonel63.serversidereplayrecorder.util.FileHandlingUtility;
 import net.minecraft.command.CommandSource;
 import net.minecraft.command.argument.ColumnPosArgumentType;
@@ -226,22 +227,42 @@ public class ReplayCommand {
                                 .executes(context -> {
                                     context.getSource().sendFeedback(new LiteralText("Recording " + ((ServerSideReplayRecorderServer.config.isRecording_enabled()) ? "Enabled" : "Disabled")).formatted(Formatting.YELLOW), true);
 
-                                    Collection<RegionRecorder> r_recorders = RegionRecorder.regionRecorderMap.values();
+                                    Collection<ReplayRecorder> recorders = ReplayRecorder.writing_recorders;
 
-                                    if(!r_recorders.isEmpty()) {
-                                        context.getSource().sendFeedback(new LiteralText("Region Recordings:").formatted(Formatting.YELLOW), true);
-                                        r_recorders.forEach( r -> {
-                                            context.getSource().sendFeedback(new LiteralText("    %s: %s %s".formatted(r.regionName, r.world.getRegistryKey().getValue(), DurationFormatUtils.formatDurationWords(r.getUptime().toMillis(), true, true))), true);
-                                        });
-                                    }
-
-                                    Collection<PlayerRecorder> p_recorders = PlayerRecorder.playerRecorderMap.values();
-
-                                    if(!p_recorders.isEmpty()) {
-                                        context.getSource().sendFeedback(new LiteralText("Player Recordings:").formatted(Formatting.YELLOW), true);
-                                        p_recorders.forEach( r -> {
-                                            context.getSource().sendFeedback(new LiteralText("    %s: %s".formatted(r.playerName, DurationFormatUtils.formatDurationWords(r.getUptime().toMillis(), true, true))).formatted(Formatting.YELLOW), true);
-                                        });
+                                    if (!recorders.isEmpty()) {
+                                        context.getSource().sendFeedback(
+                                                new LiteralText("Active Recorders:"), true);
+                                        for (ReplayRecorder recorder : recorders) {
+                                            String tag = "Recorder";
+                                            if (recorder instanceof PlayerRecorder) {
+                                                tag = "Player";
+                                            } else if (recorder instanceof RegionRecorder) {
+                                                tag = "Region";
+                                            }
+                                            context.getSource().sendFeedback(
+                                                    new LiteralText("|"), true);
+                                            context.getSource().sendFeedback(
+                                                    new LiteralText("|_%s %s:"
+                                                            .formatted(
+                                                                    tag,
+                                                                    recorder.getRecordingName()
+                                                            )), true);
+                                            context.getSource().sendFeedback(
+                                                    new LiteralText("|   |Status: %s"
+                                                            .formatted(
+                                                                    (recorder.isOpen()) ? "Recording" : "Saving"
+                                                            )), true);
+                                            context.getSource().sendFeedback(
+                                                    new LiteralText("|   |Uptime: %s"
+                                                            .formatted(
+                                                                    DurationFormatUtils.formatDurationWords(recorder.getUptime().toMillis(), true, true)
+                                                            )), true);
+                                            context.getSource().sendFeedback(
+                                                    new LiteralText("|   |Remaining Tasks: %d"
+                                                            .formatted(
+                                                                    recorder.getRemainingTasks()
+                                                            )), true);
+                                        }
                                     }
                                     return 0;
                                 })

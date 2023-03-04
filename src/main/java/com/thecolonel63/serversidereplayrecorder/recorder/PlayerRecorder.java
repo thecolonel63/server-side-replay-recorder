@@ -4,6 +4,8 @@ import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Pair;
 import com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer;
 import com.thecolonel63.serversidereplayrecorder.mixin.main.LoginSuccessfulS2CPacketAccessor;
+import com.thecolonel63.serversidereplayrecorder.util.WrappedPacket;
+import com.thecolonel63.serversidereplayrecorder.util.interfaces.LightUpdatePacketAccessor;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EquipmentSlot;
@@ -68,6 +70,14 @@ public class PlayerRecorder extends ReplayRecorder {
             //Catches a dimension change that isn't technically a respawn, but should still be count as one.
             spawnRecordingPlayer();
         }
+
+        if (packet instanceof LightUpdateS2CPacket lightUpdateS2CPacket){
+            if(((LightUpdatePacketAccessor)lightUpdateS2CPacket).isOnChunkLoad()){
+                //be sure to record new chunk light packets
+                packet = new WrappedPacket(packet);
+            }
+        }
+
         super.onPacket(packet);
         if (packet instanceof LoginSuccessS2CPacket loginSuccessS2CPacket) {
             GameProfile profile = ((LoginSuccessfulS2CPacketAccessor) loginSuccessS2CPacket).getProfile();
@@ -233,6 +243,15 @@ public class PlayerRecorder extends ReplayRecorder {
 
     public Duration getUptime(){
         return Duration.between(start_time, LocalDateTime.now());
+    }
+
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof PlayerRecorder recorder){
+            return this.playerName.equals(recorder.playerName);
+        }
+        return false;
     }
 
 }

@@ -99,6 +99,7 @@ public class FileHandlingUtility {
         httpUrlConnection = (HttpsURLConnection) url.openConnection();
         httpUrlConnection.setUseCaches(false);
         httpUrlConnection.setDoOutput(true);
+        httpUrlConnection.setChunkedStreamingMode(4096);
 
         httpUrlConnection.setRequestMethod("POST");
         httpUrlConnection.setRequestProperty("Connection", "Keep-Alive");
@@ -114,6 +115,7 @@ public class FileHandlingUtility {
                 attachmentName + "\";filename=\"" +
                 attachmentFileName + "\"" + crlf);
         request.writeBytes(crlf);
+        request.flush();
 
         Files.copy(file.toPath(), request);
 
