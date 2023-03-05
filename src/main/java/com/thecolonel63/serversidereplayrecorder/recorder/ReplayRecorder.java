@@ -31,10 +31,7 @@ import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.*;
 
 public abstract class ReplayRecorder {
 
@@ -63,7 +60,9 @@ public abstract class ReplayRecorder {
     }
 
     private static final ThreadFactory fileWriterFactory = new ThreadFactoryBuilder().setNameFormat("Replay-Writer-%d").setDaemon(true).build();
-    protected ExecutorService fileWriterExecutor = Executors.newSingleThreadExecutor(fileWriterFactory);
+    protected ThreadPoolExecutor fileWriterExecutor = new ThreadPoolExecutor(1, 1,
+            0L, TimeUnit.MILLISECONDS,
+            new LinkedBlockingQueue<>(), fileWriterFactory);
 
     public String getFileName() {
         return fileName;
@@ -331,7 +330,9 @@ public abstract class ReplayRecorder {
     }
 
     public synchronized long getRemainingTasks(){
-        return ((ThreadPoolExecutor)this.fileWriterExecutor).getQueue().size();
+        long submitted = this.fileWriterExecutor.getTaskCount();
+        long completed = this.fileWriterExecutor.getCompletedTaskCount();
+        return submitted - completed;
     }
 
     @Override

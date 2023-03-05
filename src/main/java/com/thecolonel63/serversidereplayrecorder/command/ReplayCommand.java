@@ -20,8 +20,10 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.ChunkSectionPos;
 import net.minecraft.util.math.ColumnPos;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.time.DurationFormatUtils;
+import org.apache.logging.log4j.core.appender.rolling.FileSize;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -258,6 +260,11 @@ public class ReplayCommand {
                                                                     DurationFormatUtils.formatDurationWords(recorder.getUptime().toMillis(), true, true)
                                                             )), true);
                                             context.getSource().sendFeedback(
+                                                    new LiteralText("|   |Size: %s"
+                                                            .formatted(
+                                                                    FileUtils.byteCountToDisplaySize(recorder.getFileSize())
+                                                            )), true);
+                                            context.getSource().sendFeedback(
                                                     new LiteralText("|   |Remaining Tasks: %d"
                                                             .formatted(
                                                                     recorder.getRemainingTasks()
@@ -287,23 +294,6 @@ public class ReplayCommand {
                                                                 RegionRecorder.regionRecorderMap.keySet(),
                                                                 builder
                                                         )
-                                                )
-                                                .executes(
-                                                        context -> {
-                                                            String regionName = StringArgumentType.getString(context, "regionName");
-                                                            RegionRecorder recorder = RegionRecorder.regionRecorderMap.get(regionName);
-                                                            if (recorder != null) {
-                                                                ServerCommandSource source = context.getSource();
-                                                                source.sendFeedback(new LiteralText("Region %s:".formatted(regionName)).formatted(Formatting.YELLOW), true);
-                                                                source.sendFeedback(new LiteralText("Dimension: %s".formatted(recorder.world.getRegistryKey().getValue())).formatted(Formatting.YELLOW), true);
-                                                                source.sendFeedback(new LiteralText("Area: %d %d to %d %d".formatted(recorder.region.min.x, recorder.region.min.z, recorder.region.max.x, recorder.region.max.z)).formatted(Formatting.YELLOW), true);
-                                                                source.sendFeedback(new LiteralText("Uptime: %s".formatted(DurationFormatUtils.formatDurationWords(recorder.getUptime().toMillis(),true,true))).formatted(Formatting.YELLOW), true);
-                                                                return 0;
-                                                            } else {
-                                                                context.getSource().sendError(new LiteralText("Unknown Region %s".formatted(regionName)).formatted(Formatting.RED));
-                                                                return 1;
-                                                            }
-                                                        }
                                                 ).then(
                                                         CommandManager.literal("start")
                                                                 .then(
@@ -378,6 +368,7 @@ public class ReplayCommand {
                                                                         source.sendFeedback(new LiteralText("Dimension: %s".formatted(recorder.world.getRegistryKey().getValue())).formatted(Formatting.YELLOW), true);
                                                                         source.sendFeedback(new LiteralText("Area: %d %d to %d %d".formatted(recorder.region.min.x, recorder.region.min.z, recorder.region.max.x, recorder.region.max.z)).formatted(Formatting.YELLOW), true);
                                                                         source.sendFeedback(new LiteralText("Uptime: %s".formatted(DurationFormatUtils.formatDurationWords(recorder.getUptime().toMillis(),true,true))).formatted(Formatting.YELLOW), true);
+                                                                        source.sendFeedback(new LiteralText("Size: %s".formatted(FileUtils.byteCountToDisplaySize(recorder.getFileSize()))).formatted(Formatting.YELLOW), true);
                                                                         return 0;
                                                                     } else {
                                                                         context.getSource().sendError(new LiteralText("Unknown Region %s".formatted(regionName)).formatted(Formatting.RED));
