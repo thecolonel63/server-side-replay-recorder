@@ -76,7 +76,6 @@ public abstract class ReplayRecorder {
         tmp_folder.mkdirs();
         recording_file= Paths.get(tmp_folder.getAbsolutePath(), "recording.tmcpr").toFile();
         fileName = String.format("%s.mcpr", new SimpleDateFormat("yyyy-M-dd_HH-mm-ss").format(new Date()));
-        out_file = Paths.get(this.getSaveFolder(),fileName).toFile();
 
         long remaining_space = tmp_folder.getUsableSpace();
         long storage_required = (( active_recorders.size() + 1 ) * 2L) * ServerSideReplayRecorderServer.config.getMax_file_size();
@@ -157,6 +156,7 @@ public abstract class ReplayRecorder {
         if (!startedRecording) {
             start = System.currentTimeMillis(); //More accurate timestamps.
             server_start = ServerSideReplayRecorderServer.server.getTicks();
+            out_file = Paths.get(this.getSaveFolder(),fileName).toFile();
             startedRecording = true;
         }
 
