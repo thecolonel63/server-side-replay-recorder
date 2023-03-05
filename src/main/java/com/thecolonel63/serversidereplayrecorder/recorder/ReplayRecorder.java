@@ -178,34 +178,36 @@ public abstract class ReplayRecorder {
     }
 
     public synchronized void handleDisconnect(boolean immediate) {
-            this.onServerTick();
-            this.open = false;
-            active_recorders.remove(this);
-            Runnable endTask = () -> {
-                try {
-                    bos.close();
-                    fos.close();
-                    if (debugFile != null) {
-                        debugFile.write("]");
-                        debugFile.close();
-                    }
-
-                    writeMetaData(ServerSideReplayRecorderServer.config.getServer_name(), true);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }finally {
-                    writing_recorders.remove(this);
+        this.onServerTick();
+        this.open = false;
+        active_recorders.remove(this);
+        Runnable endTask = () -> {
+            try {
+                bos.close();
+                fos.close();
+                if (debugFile != null) {
+                    debugFile.write("]");
+                    debugFile.close();
                 }
-            };
-            if(immediate){
-                //kill all tasks and close
-                this.fileWriterExecutor.shutdownNow();
-                new Thread(endTask).start();
-            }else {
-                //wait for all tasks and close
-                this.fileWriterExecutor.execute(endTask);
-                this.fileWriterExecutor.shutdown();
+
+                writeMetaData(ServerSideReplayRecorderServer.config.getServer_name(), true);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }finally {
+                writing_recorders.remove(this);
             }
+        };
+        if(immediate){
+            //kill all tasks and close
+            this.fileWriterExecutor.shutdownNow();
+            new Thread(endTask).start();
+        }else {
+            //wait for all tasks and close
+            this.fileWriterExecutor.execute(endTask);
+            new Thread(()->{
+                this.fileWriterExecutor.shutdown();
+            }).start();
+        }
     }
 
     public synchronized void onServerTick(){
