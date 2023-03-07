@@ -22,11 +22,7 @@ public class MinecraftServerMixin {
 
     @Inject(method = "shutdown", at = @At(value = "HEAD"))
     private void onStopServer(CallbackInfo ci) {
-        for (PlayerRecorder recorder : PlayerRecorder.playerRecorderMap.values()){
-            recorder.handleDisconnect();
-        }
-
-        for (RegionRecorder recorder : RegionRecorder.regionRecorderMap.values()){
+        for (ReplayRecorder recorder : ReplayRecorder.active_recorders){
             recorder.handleDisconnect();
         }
     }

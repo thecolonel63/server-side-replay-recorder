@@ -1,4 +1,4 @@
-package com.thecolonel63.serversidereplayrecorder.mixin.main;
+package com.thecolonel63.serversidereplayrecorder.mixin.player;
 
 import com.thecolonel63.serversidereplayrecorder.recorder.PlayerRecorder;
 import net.minecraft.entity.player.PlayerEntity;
@@ -37,4 +37,13 @@ public class ServerWorldMixin {
         }
     }
 
+    //Block breaking
+    @Inject(method = "setBlockBreakingInfo", at = @At("TAIL"))
+    private void saveBlockBreakingProgressPacket(int entityId, BlockPos pos, int progress, CallbackInfo ci) {
+        synchronized (PlayerRecorder.playerRecorderMap) {
+            PlayerRecorder.playerRecorderMap.forEach((connection, playerThreadRecorder) -> {
+                playerThreadRecorder.onBlockBreakAnim(entityId, pos, progress);
+            });
+        }
+    }
 }

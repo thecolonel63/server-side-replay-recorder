@@ -1,4 +1,4 @@
-package com.thecolonel63.serversidereplayrecorder.mixin.experimental;
+package com.thecolonel63.serversidereplayrecorder.mixin;
 
 import com.thecolonel63.serversidereplayrecorder.util.interfaces.LightUpdatePacketAccessor;
 import net.minecraft.network.packet.s2c.play.LightUpdateS2CPacket;

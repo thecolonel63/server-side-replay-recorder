@@ -1,4 +1,4 @@
-package com.thecolonel63.serversidereplayrecorder.mixin.experimental.region;
+package com.thecolonel63.serversidereplayrecorder.mixin.region;
 
 import com.thecolonel63.serversidereplayrecorder.recorder.RegionRecorder;
 import net.minecraft.entity.player.PlayerEntity;
@@ -25,12 +25,12 @@ public class PlayerManagerMixin {
         RegionRecorder.regionRecorderMap.values().forEach(r -> r.onPacket(packet));
     }
 
-    @Inject(method = "broadcastChatMessage", at= @At("HEAD"))
+    @Inject(method = "broadcastChatMessage", at= @At("TAIL"))
     void handleBroadcast(Text message, MessageType type, UUID sender, CallbackInfo ci){
         RegionRecorder.regionRecorderMap.values().forEach(r -> r.onPacket(new GameMessageS2CPacket(message, type, sender)));
     }
 
-    @Inject(method = "sendToOtherTeams", at= @At("HEAD"))
+    @Inject(method = "sendToOtherTeams", at= @At("TAIL"))
     void handleOtherTeamMessage(PlayerEntity source, Text message, CallbackInfo ci){
         AbstractTeam abstractTeam = source.getScoreboardTeam();
         if (abstractTeam != null) {

@@ -1,4 +1,4 @@
-package com.thecolonel63.serversidereplayrecorder.mixin.experimental.region;
+package com.thecolonel63.serversidereplayrecorder.mixin.region;
 
 import com.thecolonel63.serversidereplayrecorder.recorder.RegionRecorder;
 import com.thecolonel63.serversidereplayrecorder.util.interfaces.RegionRecorderWorld;
@@ -69,21 +69,21 @@ public class ServerWorldMixin implements RegionRecorderWorld {
         getRegionRecorders().forEach( r -> r.onPacket(packet));
     }
 
-    @Inject(method = "setBlockBreakingInfo", at = @At("HEAD"))
+    @Inject(method = "setBlockBreakingInfo", at = @At("TAIL"))
     void handleBreaking(int entityId, BlockPos pos, int progress, CallbackInfo ci){
         getRegionRecorders().stream().filter(r -> r.region.isInBox(new Vec3d(pos.getX(),pos.getY(),pos.getZ()))).forEach(
                 r -> r.onPacket(new BlockBreakingProgressS2CPacket(entityId, pos, progress))
         );
     }
 
-    @Inject(method = "playSound", at = @At("HEAD"))
+    @Inject(method = "playSound", at = @At("TAIL"))
     private void handleSound(PlayerEntity except, double x, double y, double z, SoundEvent sound, SoundCategory category, float volume, float pitch, CallbackInfo ci) {
         getRegionRecorders().stream().filter(r -> r.region.isInBox(new Vec3d(x,y,z))).forEach(
                 r -> r.onPacket(new PlaySoundS2CPacket(sound, category, x, y, z, volume, pitch))
         );
     }
 
-    @Inject(method = "syncWorldEvent", at = @At("HEAD"))
+    @Inject(method = "syncWorldEvent", at = @At("TAIL"))
     private void handleLevelEvent(PlayerEntity player, int eventId, BlockPos pos, int data, CallbackInfo ci) {
         getRegionRecorders().stream().filter(r -> r.region.isInBox(new Vec3d(pos.getX(),pos.getY(),pos.getZ()))).forEach(
                 r -> r.onPacket(new WorldEventS2CPacket(eventId, pos, data, false))
@@ -105,7 +105,7 @@ public class ServerWorldMixin implements RegionRecorderWorld {
         );
     }
 
-    @Inject(method = "sendVibrationPacket", at = @At(value = "HEAD"))
+    @Inject(method = "sendVibrationPacket", at = @At(value = "TAIL"))
     private void handleVibration(Vibration vibration, CallbackInfo ci) {
         BlockPos pos = vibration.getOrigin();
         getRegionRecorders().stream().filter(r -> r.region.isInBox(new Vec3d(pos.getX(),pos.getY(),pos.getZ()))).forEach(
@@ -113,7 +113,7 @@ public class ServerWorldMixin implements RegionRecorderWorld {
         );
     }
 
-    @Inject(method = "spawnParticles(Lnet/minecraft/particle/ParticleEffect;DDDIDDDD)I", at = @At(value = "HEAD"))
+    @Inject(method = "spawnParticles(Lnet/minecraft/particle/ParticleEffect;DDDIDDDD)I", at = @At(value = "TAIL"))
     private <T extends ParticleEffect> void handleParticles(T particle, double x, double y, double z, int count, double deltaX, double deltaY, double deltaZ, double speed, CallbackInfoReturnable<Integer> cir) {
         getRegionRecorders().stream().filter(r -> r.region.isInBox(new Vec3d(x,y,z))).forEach(
                 r -> r.onPacket(new ParticleS2CPacket(particle, false, x, y, z, (float)deltaX, (float)deltaY, (float)deltaZ, (float)speed, count))

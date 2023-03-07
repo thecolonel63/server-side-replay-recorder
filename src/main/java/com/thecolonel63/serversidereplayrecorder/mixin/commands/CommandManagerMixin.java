@@ -18,7 +18,7 @@ public abstract class CommandManagerMixin {
     @Final
     private CommandDispatcher<ServerCommandSource> dispatcher;
 
-    @Inject(at = @At(value = "INVOKE", target = "Lcom/mojang/brigadier/CommandDispatcher;findAmbiguities(Lcom/mojang/brigadier/AmbiguityConsumer;)V", shift = At.Shift.BEFORE), method = "<init>")
+    @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Lcom/mojang/brigadier/CommandDispatcher;findAmbiguities(Lcom/mojang/brigadier/AmbiguityConsumer;)V", shift = At.Shift.BEFORE))
     private void fabric_addCommands(CommandManager.RegistrationEnvironment environment, CallbackInfo ci) {
         if (environment.dedicated) {
             ReplayCommand cmd = new ReplayCommand();

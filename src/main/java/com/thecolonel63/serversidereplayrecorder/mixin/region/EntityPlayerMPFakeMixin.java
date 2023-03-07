@@ -1,4 +1,4 @@
-package com.thecolonel63.serversidereplayrecorder.mixin.experimental.region;
+package com.thecolonel63.serversidereplayrecorder.mixin.region;
 
 import carpet.patches.EntityPlayerMPFake;
 import com.thecolonel63.serversidereplayrecorder.recorder.RegionRecorder;

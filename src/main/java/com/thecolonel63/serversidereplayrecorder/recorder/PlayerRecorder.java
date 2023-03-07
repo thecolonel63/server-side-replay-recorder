@@ -87,7 +87,7 @@ public class PlayerRecorder extends ReplayRecorder {
     }
 
     @Override
-    public synchronized void handleDisconnect() {
+    public void handleDisconnect() {
         synchronized (playerRecorderMap) {
             //Player has disconnected, so remove our recorder from the map and close the output streams.
             playerRecorderMap.remove(this.connection);

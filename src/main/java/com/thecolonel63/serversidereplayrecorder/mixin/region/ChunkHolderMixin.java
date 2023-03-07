@@ -1,4 +1,4 @@
-package com.thecolonel63.serversidereplayrecorder.mixin.experimental.region;
+package com.thecolonel63.serversidereplayrecorder.mixin.region;
 
 import com.thecolonel63.serversidereplayrecorder.recorder.RegionRecorder;
 import com.thecolonel63.serversidereplayrecorder.util.interfaces.RegionRecorderWorld;
@@ -22,7 +22,7 @@ public class ChunkHolderMixin {
 
     @Shadow @Final ChunkPos pos;
 
-    @Inject(method = "sendPacketToPlayersWatching", at=@At("HEAD"))
+    @Inject(method = "sendPacketToPlayersWatching", at=@At("TAIL"))
     void handleChunkUpdate(Packet<?> packet, boolean onlyOnWatchDistanceEdge, CallbackInfo ci){
         Set<RegionRecorder> recorders = ((RegionRecorderWorld)this.world).getRegionRecordersByChunk().get(this.pos);
         if (recorders != null)

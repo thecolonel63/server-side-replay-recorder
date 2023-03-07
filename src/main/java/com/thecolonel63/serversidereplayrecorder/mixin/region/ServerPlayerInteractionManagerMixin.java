@@ -1,4 +1,4 @@
-package com.thecolonel63.serversidereplayrecorder.mixin.experimental.region;
+package com.thecolonel63.serversidereplayrecorder.mixin.region;
 
 import com.thecolonel63.serversidereplayrecorder.recorder.RegionRecorder;
 import net.minecraft.network.Packet;

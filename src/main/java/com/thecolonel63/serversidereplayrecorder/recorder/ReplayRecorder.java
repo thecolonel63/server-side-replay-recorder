@@ -29,9 +29,11 @@ import java.nio.ByteOrder;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.time.Duration;
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class ReplayRecorder {
 
@@ -44,19 +46,18 @@ public abstract class ReplayRecorder {
     protected final BufferedOutputStream bos;
     protected final FileOutputStream fos;
     protected final FileWriter debugFile;
-    protected long start;
-    protected long server_start;
+    protected final AtomicLong start = new AtomicLong();
+    protected final AtomicInteger server_start = new AtomicInteger();
     protected String fileName;
     protected NetworkState state = NetworkState.LOGIN;
-    protected int timestamp;
-    protected int server_timestamp;
+    protected final AtomicInteger server_timestamp = new AtomicInteger();
 
-    protected int last_timestamp;
-    protected boolean startedRecording = false;
-    protected boolean open = true;
+    protected final AtomicInteger last_timestamp = new AtomicInteger();
+    protected final AtomicBoolean startedRecording = new AtomicBoolean(false);
+    protected final AtomicBoolean open = new AtomicBoolean(true);
 
     public boolean isOpen() {
-        return open;
+        return open.get();
     }
 
     private static final ThreadFactory fileWriterFactory = new ThreadFactoryBuilder().setNameFormat("Replay-Writer-%d").setDaemon(true).build();
@@ -71,7 +72,7 @@ public abstract class ReplayRecorder {
     public abstract String getRecordingName();
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
-    public ReplayRecorder() throws IOException {
+    protected ReplayRecorder() throws IOException {
         tmp_folder = Paths.get(FabricLoader.getInstance().getGameDir().toString(), ServerSideReplayRecorderServer.config.getReplay_folder_name(), "recording_" + this.hashCode()).toFile();
         tmp_folder.mkdirs();
         recording_file= Paths.get(tmp_folder.getAbsolutePath(), "recording.tmcpr").toFile();
@@ -96,32 +97,33 @@ public abstract class ReplayRecorder {
         writing_recorders.add(this);
     }
 
-    protected void writeMetaData(String serverName, boolean isFinishing) {
+    void writeMetaData(boolean isFinishing) {
         try {
-            synchronized (this) {
-                JsonObject object = new JsonObject();
-                object.addProperty("singleplayer", false);
-                object.addProperty("serverName", serverName);
-                object.addProperty("customServerName", serverName + " | " + this.getRecordingName());
-                object.addProperty("duration", last_timestamp);
-                object.addProperty("date", start);
-                object.addProperty("mcversion", MinecraftVersion.GAME_VERSION.getName());
-                object.addProperty("fileFormat", "MCPR");
-                object.addProperty("fileFormatVersion", 14); //Unlikely to change any time soon, last time this was updates was several major versions ago.
-                object.addProperty("protocol", SharedConstants.getProtocolVersion());
-                object.addProperty("generator", "mattymatty's enhanced thecolonel63's Server Side Replay Recorder");
-                object.addProperty("selfId", -1);
-                object.add("players", new JsonArray());
-                FileWriter fw = new FileWriter(tmp_folder + "/metaData.json", false);
-                BufferedWriter bw = new BufferedWriter(fw);
-                bw.write(object.toString());
-                bw.close();
-                fw.close();
-                if (isFinishing)
-                    compressReplay();
-            }
+            String serverName = ServerSideReplayRecorderServer.config.getServer_name();
+            JsonObject object = new JsonObject();
+            object.addProperty("singleplayer", false);
+            object.addProperty("serverName", serverName);
+            object.addProperty("customServerName", serverName + " | " + this.getRecordingName());
+            object.addProperty("duration", last_timestamp);
+            object.addProperty("date", start);
+            object.addProperty("mcversion", MinecraftVersion.GAME_VERSION.getName());
+            object.addProperty("fileFormat", "MCPR");
+            object.addProperty("fileFormatVersion", 14); //Unlikely to change any time soon, last time this was updates was several major versions ago.
+            object.addProperty("protocol", SharedConstants.getProtocolVersion());
+            object.addProperty("generator", "mattymatty's enhanced thecolonel63's Server Side Replay Recorder");
+            object.addProperty("selfId", -1);
+            object.add("players", new JsonArray());
+            FileWriter fw = new FileWriter(tmp_folder + "/metaData.json", false);
+            BufferedWriter bw = new BufferedWriter(fw);
+            bw.write(object.toString());
+            bw.close();
+            fw.close();
+            if (isFinishing)
+                compressReplay();
         } catch (IOException ioException) {
             ioException.printStackTrace();
+        }finally {
+            this.metadataQueued.set(false);
         }
     }
     
@@ -148,118 +150,127 @@ public abstract class ReplayRecorder {
 
     }
 
-    public synchronized void onPacket(Packet<?> packet) {
-        if (! this.open)
+    public void onPacket(Packet<?> packet) {
+        if (!this.open.get())
             return;
-        active_recorders.add(this);
 
-        if (!startedRecording) {
-            start = System.currentTimeMillis(); //More accurate timestamps.
-            server_start = ServerSideReplayRecorderServer.server.getTicks();
+        if (!startedRecording.getAndSet(true)) {
+            active_recorders.add(this);
+            start.set(System.currentTimeMillis()); //More accurate timestamps.
+            server_start.set(ServerSideReplayRecorderServer.server.getTicks());
             out_file = Paths.get(this.getSaveFolder(),fileName).toFile();
-            startedRecording = true;
         }
 
         if (packet instanceof LoginCompressionS2CPacket) {
             return; //We don't compress anything in replays, so ignore the packet.
-        } else if (packet instanceof LoginSuccessS2CPacket loginSuccessS2CPacket) {
-            state = NetworkState.PLAY; //We are now dealing with "playing" packets, so set the network state accordingly.
         }
 
         if(packet instanceof LightUpdateS2CPacket)
             return; //skip LightUpdates to greatly reduce file size ( client ignores them anyway )
 
-        this.timestamp = (int) (System.currentTimeMillis() - start);
-        save(packet, timestamp);
+        save(packet);
     }
 
-    public synchronized void handleDisconnect(){
+    public void handleDisconnect(){
         this.handleDisconnect(false);
     }
 
-    public synchronized void handleDisconnect(boolean immediate) {
-        this.onServerTick();
-        this.open = false;
-        active_recorders.remove(this);
-        Runnable endTask = () -> {
-            try {
-                bos.close();
-                fos.close();
-                if (debugFile != null) {
-                    debugFile.write("]");
-                    debugFile.close();
-                }
+    public void handleDisconnect(boolean immediate) {
+        if (Thread.currentThread() == ms.getThread()){
+            this.onServerTick();
+            if (this.open.compareAndSet(true,false)) {
+                active_recorders.remove(this);
+                Runnable endTask = () -> {
+                    try {
+                        bos.close();
+                        fos.close();
+                        if (debugFile != null) {
+                            debugFile.write("]");
+                            debugFile.close();
+                        }
 
-                writeMetaData(ServerSideReplayRecorderServer.config.getServer_name(), true);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }finally {
-                writing_recorders.remove(this);
+                        writeMetaData(true);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } finally {
+                        writing_recorders.remove(this);
+                    }
+                };
+                if (immediate) {
+                    //kill all tasks and close
+                    this.fileWriterExecutor.shutdownNow();
+                    new Thread(endTask).start();
+                } else {
+                    //wait for all tasks and close
+                    this.fileWriterExecutor.execute(endTask);
+                    new Thread(() -> {
+                        this.fileWriterExecutor.shutdown();
+                    }).start();
+                }
             }
-        };
-        if(immediate){
-            //kill all tasks and close
-            this.fileWriterExecutor.shutdownNow();
-            new Thread(endTask).start();
-        }else {
-            //wait for all tasks and close
-            this.fileWriterExecutor.execute(endTask);
-            new Thread(()->{
-                this.fileWriterExecutor.shutdown();
-            }).start();
+        }else{
+            CompletableFuture.runAsync( ()-> this.handleDisconnect(immediate),ms).join();
+        }
+
+    }
+
+    public void onServerTick(){
+        if (Thread.currentThread() == ms.getThread()){
+            if (!this.open.get())
+                return;
+            int old_timestamp = this.server_timestamp.get();
+            int new_timestamp = (ms.getTicks() - server_start.get()) * 50;
+            this.server_timestamp.set(new_timestamp);
+            if (ServerSideReplayRecorderServer.config.use_server_timestamps()){
+                LinkedList<Packet<?>> tick_packets;
+                synchronized (packetQueue) {
+                    tick_packets = new LinkedList<>(this.packetQueue);
+                    packetQueue.clear();
+                }
+                this.fileWriterExecutor.execute(()->{
+                    double delta = (new_timestamp - old_timestamp)/(double)tick_packets.size();
+                    double curr_timestamp = old_timestamp;
+                    for (Packet<?> packet : tick_packets){
+                        _save(packet,(int)Math.floor(curr_timestamp));
+                        curr_timestamp+=delta;
+                    }
+                });
+            }
+        }else{
+            CompletableFuture.runAsync(this::onServerTick,ms).join();
         }
     }
 
-    public synchronized void onServerTick(){
-        if (! this.open)
-            return;
-        int old_timestamp = this.server_timestamp;
-        int new_timestamp = this.server_timestamp = (ms.getTicks() - (int)server_start) * 50;
-        if (ServerSideReplayRecorderServer.config.use_server_timestamps()){
-            LinkedList<Packet<?>> tick_packets;
-            synchronized (packetQueue) {
-                tick_packets = new LinkedList<>(this.packetQueue);
-                packetQueue.clear();
-            }
-            this.fileWriterExecutor.execute(()->{
-                double delta = (new_timestamp - old_timestamp)/(double)tick_packets.size();
-                double curr_timestamp = old_timestamp;
-                for (Packet<?> packet : tick_packets){
-                    _save(packet,(int)Math.floor(curr_timestamp));
-                    curr_timestamp+=delta;
-                }
-            });
-        }
-    }
+    protected final Queue<Packet<?>> packetQueue = new ConcurrentLinkedQueue<>();
 
-    protected final Queue<Packet<?>> packetQueue = new LinkedList<>();
-
-    public void save(Packet<?> packet) {
-        this.save(packet, this.timestamp);
-    }
-
-    public synchronized void save(Packet<?> packet, int timestamp) {
+    void save(Packet<?> packet) {
         if (ServerSideReplayRecorderServer.config.use_server_timestamps()) {
             synchronized (packetQueue){
                 packetQueue.add(packet);
             }
         }else{
             //use a separate thread to write to file ( to not hang up the server )
+            int timestamp =(int) (System.currentTimeMillis() - start.get());
             this.fileWriterExecutor.execute(() -> this._save(packet, timestamp));
         }
     }
 
-    private long current_file_size=0;
+    private final AtomicLong current_file_size = new AtomicLong();
 
     public long getCurrent_file_size() {
-        return current_file_size;
+        return current_file_size.get();
     }
+
+    private final AtomicBoolean tooBigFileSize = new AtomicBoolean(false);
+    private final AtomicBoolean metadataQueued = new AtomicBoolean(false);
 
     private void _save(Packet<?> packet, int timestamp) {
 
-        if(this.current_file_size > ServerSideReplayRecorderServer.config.getMax_file_size()){
-            ServerSideReplayRecorderServer.LOGGER.warn("Max File Size Reached, stopping recording %s".formatted(this.getRecordingName()));
-            this.handleDisconnect(true);
+        if(this.current_file_size.get() > ServerSideReplayRecorderServer.config.getMax_file_size()){
+            if (tooBigFileSize.compareAndSet(false,true)) {
+                ServerSideReplayRecorderServer.LOGGER.warn("Max File Size Reached, stopping recording %s".formatted(this.getRecordingName()));
+                this.handleDisconnect(true);
+            }
             return;
         }
 
@@ -278,6 +289,11 @@ public abstract class ReplayRecorder {
                 buffer.write(intToByteArray(timestamp));
                 buffer.write(intToByteArray(buf.readableBytes() + 1));
 
+                if (packet instanceof LoginSuccessS2CPacket) {
+                    state = NetworkState.PLAY;
+                    //We are now dealing with "playing" packets, so set the network state accordingly.
+                }
+
                 //Get the packet ID
                 Integer packetId = state.getPacketId(NetworkSide.CLIENTBOUND, packet);
                 if (packet instanceof LoginSuccessS2CPacket) {
@@ -295,14 +311,15 @@ public abstract class ReplayRecorder {
                 //Write the packet.
                 buffer.write(buf.array(), 0, buf.readableBytes());
                 bos.write(buffer.toByteArray());
-                this.current_file_size+=buffer.size();
-                writeMetaData(ServerSideReplayRecorderServer.config.getServer_name(), false);
+                this.current_file_size.addAndGet(buffer.size());
+                if(this.metadataQueued.compareAndSet(false,true))
+                    this.fileWriterExecutor.submit(() -> writeMetaData(false));
                 if (debugFile!=null) {
 
                     debugFile.write(",{\"time\": %d, \"name\": \"%s\", \"size\": %d}\n".formatted(timestamp, FabricLoader.getInstance().getMappingResolver().unmapClassName(FabricLoader.getInstance().getMappingResolver().getCurrentRuntimeNamespace(),packet.getClass().getSimpleName()), buffer.size()));
                 }
                 buffer.close();
-                this.last_timestamp = timestamp;
+                this.last_timestamp.set(timestamp);
             }
         } catch (IOException e) {
             if (e.getMessage().equals("No space left on device")){
@@ -322,16 +339,14 @@ public abstract class ReplayRecorder {
         return x.array();
     }
 
-    private final LocalDateTime start_time = LocalDateTime.now();
-
-    public synchronized Duration getUptime(){
-        return Duration.ofMillis(this.last_timestamp);
+    public Duration getUptime(){
+        return Duration.ofMillis(this.last_timestamp.get());
     }
-    public synchronized long getFileSize(){
-        return this.current_file_size;
+    public long getFileSize(){
+        return this.current_file_size.get();
     }
 
-    public synchronized long getRemainingTasks(){
+    public long getRemainingTasks(){
         long submitted = this.fileWriterExecutor.getTaskCount();
         long completed = this.fileWriterExecutor.getCompletedTaskCount();
         return submitted - completed;

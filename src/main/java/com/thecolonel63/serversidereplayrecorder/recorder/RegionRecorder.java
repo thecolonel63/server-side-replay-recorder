@@ -44,12 +44,16 @@ public class RegionRecorder extends ReplayRecorder {
     public static final Map<String, RegionRecorder> regionRecorderMap = new HashMap<>();
 
     public static RegionRecorder create(String regionName, ChunkPos pos1, ChunkPos pos2, ServerWorld world) throws IOException{
-        if (regionRecorderMap.containsKey(regionName))
-            return regionRecorderMap.get(regionName);
-        RegionRecorder recorder = new RegionRecorder(regionName, pos1, pos2, world);
+        RegionRecorder recorder;
+        synchronized (regionRecorderMap) {
+            if (regionRecorderMap.containsKey(regionName))
+                return regionRecorderMap.get(regionName);
+            recorder = new RegionRecorder(regionName, pos1, pos2, world);
+            regionRecorderMap.put(regionName, recorder);
+        }
+
         try {
             recorder.init();
-            regionRecorderMap.put(regionName, recorder);
         }catch (Throwable t){
             recorder.handleDisconnect();
             throw t;
@@ -214,7 +218,7 @@ public class RegionRecorder extends ReplayRecorder {
     }
 
     @Override
-    public synchronized void onPacket(Packet<?> packet) {
+    public void onPacket(Packet<?> packet) {
         if(ServerSideReplayRecorderServer.config.isAssume_unloaded_chunks_dont_change()){
             if(packet instanceof ChunkDataS2CPacket newChunk) {
                 ChunkPos pos = new ChunkPos(newChunk.getX(), newChunk.getZ());
@@ -231,9 +235,9 @@ public class RegionRecorder extends ReplayRecorder {
                     ChunkPos pos = new ChunkPos(lightUpdateS2CPacket.getChunkX(),lightUpdateS2CPacket.getChunkZ());
                     //be sure to record new chunk light packets
                     //skip light data as it was already recorded previously
-                    if (!known_chunk_data.contains(pos)){
+                    if (!known_chunk_light.contains(pos)){
                         packet = new WrappedPacket(packet);
-                        known_chunk_data.add(pos);
+                        known_chunk_light.add(pos);
                     }
                 }
 
@@ -254,8 +258,10 @@ public class RegionRecorder extends ReplayRecorder {
     }
 
     @Override
-    public synchronized void handleDisconnect() {
-        regionRecorderMap.remove(regionName);
+    public void handleDisconnect() {
+        synchronized (regionRecorderMap) {
+            regionRecorderMap.remove(regionName);
+        }
 
         //be sure to run the code inside the Main server thread
         if (Thread.currentThread() == world.getServer().getThread()){

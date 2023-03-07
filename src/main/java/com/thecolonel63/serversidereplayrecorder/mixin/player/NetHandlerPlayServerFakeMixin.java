@@ -1,4 +1,4 @@
-package com.thecolonel63.serversidereplayrecorder.mixin.main;
+package com.thecolonel63.serversidereplayrecorder.mixin.player;
 
 import carpet.patches.NetHandlerPlayServerFake;
 import net.minecraft.network.Packet;

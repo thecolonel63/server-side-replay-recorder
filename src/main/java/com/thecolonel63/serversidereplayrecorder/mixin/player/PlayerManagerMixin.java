@@ -1,4 +1,4 @@
-package com.thecolonel63.serversidereplayrecorder.mixin.main;
+package com.thecolonel63.serversidereplayrecorder.mixin.player;
 
 import com.mojang.authlib.GameProfile;
 import com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer;
