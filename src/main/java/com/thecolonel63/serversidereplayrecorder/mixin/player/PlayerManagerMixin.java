@@ -62,24 +62,20 @@ public abstract class PlayerManagerMixin {
 
     @Inject(method = "respawnPlayer", at = @At("HEAD"))
     private void setRespawning(ServerPlayerEntity player, boolean alive, CallbackInfoReturnable<ServerPlayerEntity> cir) {
-        synchronized (PlayerRecorder.playerRecorderMap) {
-            PlayerRecorder.playerRecorderMap.forEach(((connection, playerThreadRecorder) -> {
-                if (player != null && playerThreadRecorder.playerId.equals(player.getUuid())) {
-                    playerThreadRecorder.isRespawning = true;
-                }
-            }));
-        }
+        PlayerRecorder.playerRecorderMap.forEach(((connection, playerThreadRecorder) -> {
+            if (player != null && playerThreadRecorder.playerId.equals(player.getUuid())) {
+                playerThreadRecorder.isRespawning = true;
+            }
+        }));
     }
 
     @Inject(method = "respawnPlayer", at = @At("TAIL"))
     private void respawnPlayer(ServerPlayerEntity player, boolean alive, CallbackInfoReturnable<ServerPlayerEntity> cir) {
-        synchronized (PlayerRecorder.playerRecorderMap) {
-            PlayerRecorder.playerRecorderMap.forEach((connection, playerThreadRecorder) -> {
-                if (player != null && playerThreadRecorder.playerId.equals(player.getUuid())) {
-                    playerThreadRecorder.spawnRecordingPlayer();
-                    playerThreadRecorder.isRespawning = false;
-                }
-            });
-        }
+        PlayerRecorder.playerRecorderMap.forEach((connection, playerThreadRecorder) -> {
+            if (player != null && playerThreadRecorder.playerId.equals(player.getUuid())) {
+                playerThreadRecorder.spawnRecordingPlayer();
+                playerThreadRecorder.isRespawning = false;
+            }
+        });
     }
 }

@@ -124,12 +124,10 @@ public class ServerSideReplayRecorderServer implements ModInitializer {
     }
 
     public static void tick() {
-        synchronized (PlayerRecorder.playerRecorderMap) {
-            PlayerRecorder.playerRecorderMap.forEach((connection, playerThreadRecorder) -> {
-                //Initiate the saving process of what isn't automatically saved.
-                playerThreadRecorder.onPlayerTick();
-            });
-        }
+        PlayerRecorder.playerRecorderMap.forEach((connection, playerThreadRecorder) -> {
+            //Initiate the saving process of what isn't automatically saved.
+            playerThreadRecorder.onPlayerTick();
+        });
     }
 
     @Override

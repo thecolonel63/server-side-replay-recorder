@@ -34,6 +34,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 public abstract class ReplayRecorder {
 
@@ -62,7 +63,7 @@ public abstract class ReplayRecorder {
 
     private static final ThreadFactory fileWriterFactory = new ThreadFactoryBuilder().setNameFormat("Replay-Writer-%d").setDaemon(true).build();
     protected ThreadPoolExecutor fileWriterExecutor = new ThreadPoolExecutor(1, 1,
-            0L, TimeUnit.MILLISECONDS,
+            30L, TimeUnit.SECONDS,
             new LinkedBlockingQueue<>(), fileWriterFactory);
 
     public String getFileName() {
@@ -97,7 +98,7 @@ public abstract class ReplayRecorder {
         writing_recorders.add(this);
     }
 
-    void writeMetaData(boolean isFinishing) {
+    synchronized void writeMetaData(boolean isFinishing) {
         try {
             String serverName = ServerSideReplayRecorderServer.config.getServer_name();
             JsonObject object = new JsonObject();
@@ -222,11 +223,7 @@ public abstract class ReplayRecorder {
             int new_timestamp = (ms.getTicks() - server_start.get()) * 50;
             this.server_timestamp.set(new_timestamp);
             if (ServerSideReplayRecorderServer.config.use_server_timestamps()){
-                LinkedList<Packet<?>> tick_packets;
-                synchronized (packetQueue) {
-                    tick_packets = new LinkedList<>(this.packetQueue);
-                    packetQueue.clear();
-                }
+                Queue<Packet<?>> tick_packets = this.packetQueue.getAndSet(new ConcurrentLinkedQueue<>());
                 this.fileWriterExecutor.execute(()->{
                     double delta = (new_timestamp - old_timestamp)/(double)tick_packets.size();
                     double curr_timestamp = old_timestamp;
@@ -241,13 +238,11 @@ public abstract class ReplayRecorder {
         }
     }
 
-    protected final Queue<Packet<?>> packetQueue = new ConcurrentLinkedQueue<>();
+    protected final AtomicReference<Queue<Packet<?>>> packetQueue = new AtomicReference<>(new ConcurrentLinkedQueue<>());
 
     void save(Packet<?> packet) {
         if (ServerSideReplayRecorderServer.config.use_server_timestamps()) {
-            synchronized (packetQueue){
-                packetQueue.add(packet);
-            }
+            packetQueue.get().add(packet);
         }else{
             //use a separate thread to write to file ( to not hang up the server )
             int timestamp =(int) (System.currentTimeMillis() - start.get());

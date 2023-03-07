@@ -8,6 +8,7 @@ import com.thecolonel63.serversidereplayrecorder.util.interfaces.LightUpdatePack
 import com.thecolonel63.serversidereplayrecorder.util.interfaces.RegionRecorderStorage;
 import com.thecolonel63.serversidereplayrecorder.util.interfaces.RegionRecorderWorld;
 import io.netty.buffer.Unpooled;
+import io.netty.util.internal.ConcurrentSet;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.entity.player.PlayerAbilities;
 import net.minecraft.entity.player.PlayerEntity;
@@ -38,22 +39,25 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class RegionRecorder extends ReplayRecorder {
 
-    public static final Map<String, RegionRecorder> regionRecorderMap = new HashMap<>();
+    public static final Map<String, RegionRecorder> regionRecorderMap = new ConcurrentHashMap<>();
 
     public static RegionRecorder create(String regionName, ChunkPos pos1, ChunkPos pos2, ServerWorld world) throws IOException{
-        RegionRecorder recorder;
-        synchronized (regionRecorderMap) {
-            if (regionRecorderMap.containsKey(regionName))
-                return regionRecorderMap.get(regionName);
-            recorder = new RegionRecorder(regionName, pos1, pos2, world);
-            regionRecorderMap.put(regionName, recorder);
-        }
+        RegionRecorder recorder = regionRecorderMap.computeIfAbsent(regionName, n -> {
+            try {
+                return new RegionRecorder(n, pos1, pos2, world);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
 
         try {
-            recorder.init();
+            if(recorder.isInit.compareAndSet(false, true))
+                recorder.init();
         }catch (Throwable t){
             recorder.handleDisconnect();
             throw t;
@@ -79,11 +83,13 @@ public class RegionRecorder extends ReplayRecorder {
 
     public final ChunkBox region;
 
-    public final Set<ChunkPos> known_chunk_data = new HashSet<>();
-    public final Set<ChunkPos> known_chunk_light = new HashSet<>();
+    public final Set<ChunkPos> known_chunk_data = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    public final Set<ChunkPos> known_chunk_light = Collections.newSetFromMap(new ConcurrentHashMap<>());
     protected Vec3i viewpoint;
 
     public final ServerWorld world;
+
+    private final AtomicBoolean isInit = new AtomicBoolean();
 
     private RegionRecorder(String regionName, ChunkPos pos1, ChunkPos pos2, ServerWorld world) throws IOException {
         super();
@@ -155,10 +161,10 @@ public class RegionRecorder extends ReplayRecorder {
 
 
         //this code is mandatory to be run in the Main Server Thread
-        if (Thread.currentThread() == world.getServer().getThread()){
+        if (Thread.currentThread() == ms.getThread()){
             this._syncInit();
         }else{
-            CompletableFuture.runAsync(this::_syncInit,world.getServer()).join();
+            CompletableFuture.runAsync(this::_syncInit,ms).join();
         }
 
         //set the render distance center
@@ -203,12 +209,12 @@ public class RegionRecorder extends ReplayRecorder {
 
         //register as an entity watcher ( this will also send all the packets for spawning entities already in the region )
         //this code is mandatory to be run in the Main Server Thread
-        if (Thread.currentThread() == world.getServer().getThread()){
+        if (Thread.currentThread() == ms.getThread()){
             ((RegionRecorderStorage)world.getChunkManager().threadedAnvilChunkStorage).registerRecorder(this);
         }else{
             CompletableFuture.runAsync(()->{
                 ((RegionRecorderStorage)world.getChunkManager().threadedAnvilChunkStorage).registerRecorder(this);
-            },world.getServer()).join();
+            },ms).join();
         }
 
         //set the replay viewpoint to the center of the watched region
@@ -259,15 +265,13 @@ public class RegionRecorder extends ReplayRecorder {
 
     @Override
     public void handleDisconnect() {
-        synchronized (regionRecorderMap) {
-            regionRecorderMap.remove(regionName);
-        }
+        regionRecorderMap.remove(regionName);
 
         //be sure to run the code inside the Main server thread
-        if (Thread.currentThread() == world.getServer().getThread()){
+        if (Thread.currentThread() == ms.getThread()){
             _unRegister();
         }else{
-            CompletableFuture.runAsync(this::_unRegister,world.getServer()).join();
+            CompletableFuture.runAsync(this::_unRegister,ms).join();
         }
 
         super.handleDisconnect();
