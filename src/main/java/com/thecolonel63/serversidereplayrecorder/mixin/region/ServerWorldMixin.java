@@ -57,51 +57,16 @@ public class ServerWorldMixin implements RegionRecorderWorld {
         return this.recorders_by_expanded_chunk;
     }
 
-    @Redirect(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/PlayerManager;sendToDimension(Lnet/minecraft/network/Packet;Lnet/minecraft/util/registry/RegistryKey;)V"))
-    void handleWheater(PlayerManager instance, Packet<?> packet, RegistryKey<World> dimension){
-        instance.sendToDimension(packet, dimension);
-        getRegionRecorders().forEach( r -> r.onPacket(packet));
-    }
-
-    @Redirect(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/PlayerManager;sendToAll(Lnet/minecraft/network/Packet;)V"))
-    void handleWheater(PlayerManager instance, Packet<?> packet){
-        instance.sendToAll(packet);
-        getRegionRecorders().forEach( r -> r.onPacket(packet));
-    }
-
     @Inject(method = "setBlockBreakingInfo", at = @At("TAIL"))
     void handleBreaking(int entityId, BlockPos pos, int progress, CallbackInfo ci){
         getRegionRecorders().stream().filter(r -> r.region.isInBox(new Vec3d(pos.getX(),pos.getY(),pos.getZ()))).forEach(
                 r -> r.onPacket(new BlockBreakingProgressS2CPacket(entityId, pos, progress))
         );
     }
-
-    @Inject(method = "playSound", at = @At("TAIL"))
-    private void handleSound(PlayerEntity except, double x, double y, double z, SoundEvent sound, SoundCategory category, float volume, float pitch, CallbackInfo ci) {
-        getRegionRecorders().stream().filter(r -> r.region.isInBox(new Vec3d(x,y,z))).forEach(
-                r -> r.onPacket(new PlaySoundS2CPacket(sound, category, x, y, z, volume, pitch))
-        );
-    }
-
-    @Inject(method = "syncWorldEvent", at = @At("TAIL"))
-    private void handleLevelEvent(PlayerEntity player, int eventId, BlockPos pos, int data, CallbackInfo ci) {
-        getRegionRecorders().stream().filter(r -> r.region.isInBox(new Vec3d(pos.getX(),pos.getY(),pos.getZ()))).forEach(
-                r -> r.onPacket(new WorldEventS2CPacket(eventId, pos, data, false))
-        );
-    }
-
     @Inject(method = "createExplosion", at = @At(value = "TAIL"), locals = LocalCapture.CAPTURE_FAILHARD)
     private void handleExplosion(Entity entity, DamageSource damageSource, ExplosionBehavior behavior, double x, double y, double z, float power, boolean createFire, Explosion.DestructionType destructionType, CallbackInfoReturnable<Explosion> cir, Explosion explosion) {
         getRegionRecorders().stream().filter(r -> r.region.isInBox(new Vec3d(x,y,z))).forEach(
                 r -> r.onPacket(new ExplosionS2CPacket(x, y, z, power, explosion.getAffectedBlocks(), Vec3d.ZERO))
-        );
-    }
-
-    @Inject(method = "processSyncedBlockEvents", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/PlayerManager;sendToAround(Lnet/minecraft/entity/player/PlayerEntity;DDDDLnet/minecraft/util/registry/RegistryKey;Lnet/minecraft/network/Packet;)V"), locals = LocalCapture.CAPTURE_FAILHARD)
-    private void handleBlockEvent(CallbackInfo ci, BlockEvent blockEvent) {
-        BlockPos pos = blockEvent.getPos();
-        getRegionRecorders().stream().filter(r -> r.region.isInBox(new Vec3d(pos.getX(),pos.getY(),pos.getZ()))).forEach(
-                r -> r.onPacket(new BlockEventS2CPacket(blockEvent.getPos(), blockEvent.getBlock(), blockEvent.getType(), blockEvent.getData()))
         );
     }
 

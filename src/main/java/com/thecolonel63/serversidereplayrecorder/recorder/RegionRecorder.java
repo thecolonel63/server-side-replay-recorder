@@ -232,10 +232,6 @@ public class RegionRecorder extends ReplayRecorder {
                     return; //skip chunk data as it was already recorded previously
                 else
                     known_chunk_data.add(pos);
-
-            } else if (packet instanceof UnloadChunkS2CPacket) {
-                return; //this is always ignored by clients but better be safe
-
             } else if (packet instanceof LightUpdateS2CPacket lightUpdateS2CPacket){
                 if(((LightUpdatePacketAccessor)lightUpdateS2CPacket).isOnChunkLoad()){
                     ChunkPos pos = new ChunkPos(lightUpdateS2CPacket.getChunkX(),lightUpdateS2CPacket.getChunkZ());
@@ -249,6 +245,12 @@ public class RegionRecorder extends ReplayRecorder {
 
             }
         }
+        if (packet instanceof UnloadChunkS2CPacket)
+            //this is always ignored by clients but better be safe
+            return;
+        if (packet instanceof ChunkLoadDistanceS2CPacket)
+            //do not update view distance
+            return;
         super.onPacket(packet);
     }
 

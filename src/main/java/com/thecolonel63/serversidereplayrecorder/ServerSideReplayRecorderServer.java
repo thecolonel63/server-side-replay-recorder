@@ -21,6 +21,7 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 @Environment(EnvType.SERVER)
 public class ServerSideReplayRecorderServer implements ModInitializer {
@@ -37,9 +38,6 @@ public class ServerSideReplayRecorderServer implements ModInitializer {
     private static final ObjectMapper yaml;
 
     public static final Logger LOGGER = LoggerFactory.getLogger(ServerSideReplayRecorderServer.class.getName());
-
-
-    //TODO: swap the maps with Apache Caches with either Soft or Weak keys and values to prevent memory leaks
 
     public static MinecraftServer server;
 

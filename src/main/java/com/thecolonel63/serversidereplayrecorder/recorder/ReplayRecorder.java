@@ -7,6 +7,7 @@ import com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer;
 import com.thecolonel63.serversidereplayrecorder.util.FileHandlingUtility;
 import com.thecolonel63.serversidereplayrecorder.util.WrappedPacket;
 import io.netty.buffer.Unpooled;
+import io.netty.util.concurrent.RejectedExecutionHandlers;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.MinecraftVersion;
 import net.minecraft.SharedConstants;
@@ -64,7 +65,7 @@ public abstract class ReplayRecorder {
     private static final ThreadFactory fileWriterFactory = new ThreadFactoryBuilder().setNameFormat("Replay-Writer-%d").setDaemon(true).build();
     protected ThreadPoolExecutor fileWriterExecutor = new ThreadPoolExecutor(1, 1,
             30L, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(), fileWriterFactory);
+            new LinkedBlockingQueue<>(), fileWriterFactory, new ThreadPoolExecutor.DiscardPolicy());
 
     public String getFileName() {
         return fileName;

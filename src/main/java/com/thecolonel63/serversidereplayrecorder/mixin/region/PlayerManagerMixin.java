@@ -4,10 +4,17 @@ import com.thecolonel63.serversidereplayrecorder.recorder.RegionRecorder;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.MessageType;
 import net.minecraft.network.Packet;
+import net.minecraft.network.packet.s2c.play.ChunkLoadDistanceS2CPacket;
 import net.minecraft.network.packet.s2c.play.GameMessageS2CPacket;
+import net.minecraft.network.packet.s2c.play.WorldEventS2CPacket;
 import net.minecraft.scoreboard.AbstractTeam;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.text.Text;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Vec3d;
+import net.minecraft.util.registry.RegistryKey;
+import net.minecraft.world.World;
+import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -18,12 +25,6 @@ import java.util.UUID;
 
 @Mixin(PlayerManager.class)
 public class PlayerManagerMixin {
-
-    @Redirect(method = "onPlayerConnect", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/PlayerManager;sendToAll(Lnet/minecraft/network/Packet;)V"))
-    void handleNewPlayer(PlayerManager instance, Packet<?> packet){
-        instance.sendToAll(packet);
-        RegionRecorder.regionRecorderMap.values().forEach(r -> r.onPacket(packet));
-    }
 
     @Inject(method = "broadcastChatMessage", at= @At("TAIL"))
     void handleBroadcast(Text message, MessageType type, UUID sender, CallbackInfo ci){
@@ -38,9 +39,21 @@ public class PlayerManagerMixin {
         }
     }
 
-    @Redirect(method = "remove", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/PlayerManager;sendToAll(Lnet/minecraft/network/Packet;)V"))
-    void handlePlayerDisconnectPlayer(PlayerManager instance, Packet<?> packet){
-        instance.sendToAll(packet);
+    @Inject(method = "sendToDimension", at= @At("TAIL"))
+    void handleDimensionPacket(Packet<?> packet, RegistryKey<World> dimension, CallbackInfo ci){
+        RegionRecorder.regionRecorderMap.values().stream().filter(r -> r.world.getRegistryKey().equals(dimension)).forEach(r -> r.onPacket(packet));
+    }
+
+    @Inject(method = "sendToAll", at= @At("TAIL"))
+    void handleAllPacket(Packet<?> packet, CallbackInfo ci){
         RegionRecorder.regionRecorderMap.values().forEach(r -> r.onPacket(packet));
     }
+
+    @Inject(method = "sendToAround", at = @At("TAIL"))
+    private void handleLevelEvent(@Nullable PlayerEntity player, double x, double y, double z, double distance, RegistryKey<World> worldKey, Packet<?> packet, CallbackInfo ci) {
+        RegionRecorder.regionRecorderMap.values().stream().filter(r -> r.world.getRegistryKey().equals(worldKey)).filter(r -> r.region.isInBox(new Vec3d(x,y,z))).forEach(
+                r -> r.onPacket(packet)
+        );
+    }
+
 }
