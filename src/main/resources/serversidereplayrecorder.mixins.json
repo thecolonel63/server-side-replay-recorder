@@ -4,15 +4,17 @@
   "package": "com.thecolonel63.serversidereplayrecorder.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
+    "NetHandlerPlayServerFakeMixin",
+    "commands.CommandManagerMixin"
   ],
   "client": [
   ],
   "server": [
-    "ClientConnectionMixin",
     "LoginSuccessfulS2CPacketAccessor",
     "MinecraftServerMixin",
     "PlayerManagerMixin",
     "RenderGlobalMixin",
+    "ServerPlayNetworkHandlerMixin",
     "ServerWorldMixin"
   ],
   "injectors": {

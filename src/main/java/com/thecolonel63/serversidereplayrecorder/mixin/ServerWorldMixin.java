@@ -2,7 +2,6 @@ package com.thecolonel63.serversidereplayrecorder.mixin;
 
 import com.thecolonel63.serversidereplayrecorder.server.ServerSideReplayRecorderServer;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
@@ -16,11 +15,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class ServerWorldMixin {
     //Sounds
     @Inject(method = "playSound", at = @At("HEAD"))
-    private void recordPlaySound(PlayerEntity except, double x, double y, double z, RegistryEntry<SoundEvent> sound, SoundCategory category, float volume, float pitch, long seed, CallbackInfo ci) {
+    private void recordPlaySound(PlayerEntity except, double x, double y, double z, SoundEvent sound, SoundCategory category, float volume, float pitch, CallbackInfo ci) {
         synchronized (ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap) {
             ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap.forEach((connection, playerThreadRecorder) -> {
                 if (playerThreadRecorder.playerId != null) {
-                    playerThreadRecorder.onClientSound(sound, category, x, y, z, volume, pitch, seed);
+                    playerThreadRecorder.onClientSound(sound, category, x, y, z, volume, pitch);
                 }
             });
         }

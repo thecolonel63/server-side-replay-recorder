@@ -1,5 +1,6 @@
 plugins {
     id 'fabric-loom' version '0.12-SNAPSHOT'
+    id 'io.github.juuxel.loom-quiltflower' version '1.7.1'
     id 'maven-publish'
 }
 
@@ -7,11 +8,16 @@ version = project.mod_version
 group = project.maven_group
 
 repositories {
-    // Add repositories to retrieve artifacts from in here.
-    // You should only use this when depending on other mods because
-    // Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
-    // See https://docs.gradle.org/current/userguide/declaring_repositories.html
-    // for more information about repositories.
+    maven { url "https://maven.terraformersmc.com/" }
+    maven {
+        url 'https://masa.dy.fi/maven'
+    }
+}
+
+configurations {
+    provided
+    // Make compile extend from our provided configuration so that things added to bundled end up on the compile classpath
+    implementation.extendsFrom(provided)
 }
 
 dependencies {
@@ -19,6 +25,8 @@ dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
+    modCompileOnly "carpet:fabric-carpet:${project.minecraft_version}-${project.carpet_core_version}"
+    provided "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:latest.release"
 }
 
 processResources {
@@ -55,9 +63,11 @@ java {
 }
 
 jar {
+    duplicatesStrategy(DuplicatesStrategy.EXCLUDE)
     from("LICENSE") {
         rename { "${it}_${project.archivesBaseName}" }
     }
+    from configurations.provided.asFileTree.files.collect { zipTree(it) }
 }
 
 // configure the maven publication
@@ -76,3 +86,55 @@ publishing {
         // retrieving dependencies.
     }
 }
+def buildnumber = 1
+
+tasks.register("updateBuildNumber") {
+    doLast {
+        Properties props = new Properties()
+
+        File propsFile = new File("build-${project.minecraft_version}.properties")
+
+        try {
+            props.load(propsFile.newDataInputStream())
+        }catch (IOException ignored){
+            props.setProperty('mod_buildnumber', "1")
+            props.setProperty('mod_version', project.mod_version.toString())
+        }
+
+        String prevVersion = (props.getProperty('mod_version'))
+
+        if (prevVersion.equals(project.mod_version)) {
+
+            buildnumber = (((props.getProperty('mod_buildnumber')) as Integer) + 1)
+
+        }
+
+        props.setProperty('mod_buildnumber', buildnumber.toString())
+        props.setProperty('mod_version', project.mod_version.toString())
+
+        props.store(propsFile.newWriter(), null)
+
+        props.load(propsFile.newDataInputStream())
+
+    }
+    outputs.upToDateWhen { false }
+}
+
+tasks.register("FinalizeBuild", Copy) {
+    from "$buildDir/libs"
+    into "output/libs"
+    include "${project.archives_base_name}-${project.version}.jar"
+    rename { String filename ->
+        return "${project.archives_base_name}-${project.version} build ${buildnumber}.jar"
+    }
+    doLast {
+        mkdir "output/libs"
+        println "Output File:"
+        println "${project.archives_base_name}-${project.version} build ${buildnumber}.jar"
+    }
+    outputs.upToDateWhen { false }
+}
+
+tasks.compileJava.finalizedBy updateBuildNumber
+tasks.updateBuildNumber.shouldRunAfter compileJava
+tasks.build.finalizedBy FinalizeBuild

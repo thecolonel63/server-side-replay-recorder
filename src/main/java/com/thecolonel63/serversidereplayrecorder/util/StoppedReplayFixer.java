@@ -18,7 +18,7 @@ public class StoppedReplayFixer {
 
     static int lastTimestamp = 0;
 
-    static String metaData = "{\"singleplayer\":false,\"serverName\":\""+ServerSideReplayRecorderServer.serverName+"\",\"customServerName\":\""+ServerSideReplayRecorderServer.serverName+"\",\"duration\":%DURATION%,\"date\":%DATE%,\"mcversion\":\""+MinecraftVersion.CURRENT.getName()+"\",\"fileFormat\":\"MCPR\",\"fileFormatVersion\":14,\"protocol\":"+ SharedConstants.getProtocolVersion()+",\"generator\":\"thecolonel63's Server Side Replay Recorder\",\"selfId\":-1,\"players\":[]}";
+    static String metaData = "{\"singleplayer\":false,\"serverName\":\""+ServerSideReplayRecorderServer.config.getServer_name()+"\",\"customServerName\":\""+ServerSideReplayRecorderServer.config.getServer_name()+"\",\"duration\":%DURATION%,\"date\":%DATE%,\"mcversion\":\""+MinecraftVersion.GAME_VERSION.getName()+"\",\"fileFormat\":\"MCPR\",\"fileFormatVersion\":14,\"protocol\":"+ SharedConstants.getProtocolVersion()+",\"generator\":\"thecolonel63's Server Side Replay Recorder\",\"selfId\":-1,\"players\":[]}";
     static String loginName = "NONAME";
     static UUID loginUuid = new UUID(0, 0);
     static boolean loggedIn = false;
@@ -48,7 +48,7 @@ public class StoppedReplayFixer {
             writer.close();
         }
 
-        File movedReplayFile = new File(stoppedFolder.getParentFile()+"/"+(ServerSideReplayRecorderServer.useUsernameForRecordings ? loginName : loginUuid)+"/"+getReplayName(zone));
+        File movedReplayFile = new File(stoppedFolder.getParentFile()+"/"+(ServerSideReplayRecorderServer.config.use_username_for_recordings() ? loginName : loginUuid)+"/"+getReplayName(zone));
         movedReplayFile.getParentFile().mkdirs();
 
         FileHandlingUtility.zip(new ArrayList<>(){{add(new File(stoppedFolder+"/metaData.json")); add(new File(stoppedFolder+"/recording.tmcpr"));}}, movedReplayFile.toString(), false, null);

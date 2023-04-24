@@ -7,6 +7,7 @@ import com.mojang.datafixers.util.Pair;
 import com.thecolonel63.serversidereplayrecorder.mixin.LoginSuccessfulS2CPacketAccessor;
 import com.thecolonel63.serversidereplayrecorder.server.ServerSideReplayRecorderServer;
 import io.netty.buffer.Unpooled;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.MinecraftVersion;
 import net.minecraft.SharedConstants;
 import net.minecraft.entity.Entity;
@@ -17,7 +18,6 @@ import net.minecraft.network.*;
 import net.minecraft.network.packet.s2c.login.LoginCompressionS2CPacket;
 import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;
 import net.minecraft.network.packet.s2c.play.*;
-import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundCategory;
@@ -28,7 +28,6 @@ import net.minecraft.util.math.BlockPos;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.file.Paths;
 import java.util.*;
 
 public class PlayerThreadRecorder {
@@ -56,7 +55,7 @@ public class PlayerThreadRecorder {
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     public PlayerThreadRecorder(ClientConnection connection) throws IOException {
-        folderToRecordTo = new File(Paths.get("").toAbsolutePath() + "/" + ServerSideReplayRecorderServer.replayFolderName + "/recording_" + this.hashCode());
+        folderToRecordTo = new File(FabricLoader.getInstance().getGameDir() + "/" + ServerSideReplayRecorderServer.config.getReplay_folder_name() + "/recording_" + this.hashCode());
         folderToRecordTo.mkdirs();
         fos = new FileOutputStream(folderToRecordTo + "/recording.tmcpr", true);
         bos = new BufferedOutputStream(fos);
@@ -71,7 +70,7 @@ public class PlayerThreadRecorder {
             object.addProperty("customServerName", serverName);
             object.addProperty("duration", timestamp);
             object.addProperty("date", start);
-            object.addProperty("mcversion", MinecraftVersion.CURRENT.getName());
+            object.addProperty("mcversion", MinecraftVersion.GAME_VERSION.getName());
             object.addProperty("fileFormat", "MCPR");
             object.addProperty("fileFormatVersion", 14); //Unlikely to change any time soon, last time this was updates was several major versions ago.
             object.addProperty("protocol", SharedConstants.getProtocolVersion());
@@ -96,7 +95,7 @@ public class PlayerThreadRecorder {
         String fileName = cal.get(Calendar.YEAR) + "_" + String.format("%02d", (cal.get(Calendar.MONTH) + 1)) + "_" + String.format("%02d", (cal.get(Calendar.DAY_OF_MONTH))) + "_" + String.format("%02d", (cal.get(Calendar.HOUR_OF_DAY))) + "_" + String.format("%02d", (cal.get(Calendar.MINUTE))) + "_" + String.format("%02d", (cal.get(Calendar.SECOND))) + ".mcpr";
         String name = (playerName != null) ? playerName : "NONAME";
 
-        File output = new File(folderToRecordTo.getParentFile() + "/" + (ServerSideReplayRecorderServer.useUsernameForRecordings ? name : playerId.toString()) + "/" + fileName);
+        File output = new File(folderToRecordTo.getParentFile() + "/" + (ServerSideReplayRecorderServer.config.use_username_for_recordings() ? name : playerId.toString()) + "/" + fileName);
         ArrayList<File> filesToCompress = new ArrayList<>() {{
             add(new File(folderToRecordTo + "/metaData.json"));
             add(new File(folderToRecordTo + "/recording.tmcpr"));
@@ -141,7 +140,7 @@ public class PlayerThreadRecorder {
             try {
                 bos.close();
                 fos.close();
-                Thread savingThread = new Thread(() -> writeMetaData(ServerSideReplayRecorderServer.serverName, true));
+                Thread savingThread = new Thread(() -> writeMetaData(ServerSideReplayRecorderServer.config.getServer_name(), true));
                 savingThread.start();
             } catch (IOException e) {
                 e.printStackTrace();
@@ -184,7 +183,7 @@ public class PlayerThreadRecorder {
                 spawnRecordingPlayer();
             }
 
-            writeMetaData(ServerSideReplayRecorderServer.serverName, false);
+            writeMetaData(ServerSideReplayRecorderServer.config.getServer_name(), false);
 
         } catch (IOException e) {
             e.printStackTrace();
@@ -204,7 +203,7 @@ public class PlayerThreadRecorder {
             ServerPlayerEntity player = ms.getPlayerManager().getPlayer(playerId);
             if (player == null) return;
             save(new PlayerSpawnS2CPacket(player));
-            save(new EntityTrackerUpdateS2CPacket(player.getId(), player.getDataTracker().getChangedEntries()));
+            save(new EntityTrackerUpdateS2CPacket(player.getId(), player.getDataTracker(), false));
             playerSpawned = true;
             lastX = lastY = lastZ = null;
         } catch (Exception e) {
@@ -317,10 +316,10 @@ public class PlayerThreadRecorder {
         }
     }
 
-    public void onClientSound(RegistryEntry<SoundEvent> sound, SoundCategory category, double x, double y, double z, float volume, float pitch, long seed) {
+    public void onClientSound(SoundEvent sound, SoundCategory category, double x, double y, double z, float volume, float pitch) {
         try {
             // Send to all other players in ServerWorldEventHandler#playSoundToAllNearExcept
-            save(new PlaySoundS2CPacket(sound, category, x, y, z, volume, pitch, seed));
+            save(new PlaySoundS2CPacket(sound, category, x, y, z, volume, pitch));
         } catch (Exception e) {
             e.printStackTrace();
         }
