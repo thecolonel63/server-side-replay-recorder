@@ -42,9 +42,7 @@ public abstract class PlayerManagerMixin {
             try {
                 ServerSideReplayRecorderServer.LOGGER.info("Started Recording Player %s".formatted(player.getGameProfile().getName()));
 
-                this.getPlayerList().stream().filter(p -> this.isOperator(p.getGameProfile())).forEach( p -> {
-                    p.sendMessage(new LiteralText("Started Recording Player %s".formatted(player.getGameProfile().getName())).formatted(Formatting.GOLD), MessageType.SYSTEM, Util.NIL_UUID);
-                });
+                this.getPlayerList().stream().filter(p -> this.isOperator(p.getGameProfile())).forEach( p -> p.sendMessage(new LiteralText("Started Recording Player %s".formatted(player.getGameProfile().getName())).formatted(Formatting.GOLD), MessageType.SYSTEM, Util.NIL_UUID));
                 PlayerRecorder recorder = new PlayerRecorder(connection);
                 PlayerRecorder.playerRecorderMap.put(connection, recorder);
                 recorder.onPacket(new LoginSuccessS2CPacket(player.getGameProfile()));

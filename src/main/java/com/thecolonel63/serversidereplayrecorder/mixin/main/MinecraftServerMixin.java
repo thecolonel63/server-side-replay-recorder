@@ -1,8 +1,6 @@
 package com.thecolonel63.serversidereplayrecorder.mixin.main;
 
 import com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer;
-import com.thecolonel63.serversidereplayrecorder.recorder.PlayerRecorder;
-import com.thecolonel63.serversidereplayrecorder.recorder.RegionRecorder;
 import com.thecolonel63.serversidereplayrecorder.recorder.ReplayRecorder;
 import net.minecraft.server.MinecraftServer;
 import org.spongepowered.asm.mixin.Mixin;

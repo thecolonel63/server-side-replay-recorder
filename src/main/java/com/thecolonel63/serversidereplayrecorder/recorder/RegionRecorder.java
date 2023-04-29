@@ -8,7 +8,6 @@ import com.thecolonel63.serversidereplayrecorder.util.interfaces.LightUpdatePack
 import com.thecolonel63.serversidereplayrecorder.util.interfaces.RegionRecorderStorage;
 import com.thecolonel63.serversidereplayrecorder.util.interfaces.RegionRecorderWorld;
 import io.netty.buffer.Unpooled;
-import io.netty.util.internal.ConcurrentSet;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.entity.player.PlayerAbilities;
 import net.minecraft.entity.player.PlayerEntity;
@@ -38,7 +37,6 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -46,7 +44,7 @@ public class RegionRecorder extends ReplayRecorder {
 
     public static final Map<String, RegionRecorder> regionRecorderMap = new ConcurrentHashMap<>();
 
-    public static RegionRecorder create(String regionName, ChunkPos pos1, ChunkPos pos2, ServerWorld world) throws IOException{
+    public static RegionRecorder create(String regionName, ChunkPos pos1, ChunkPos pos2, ServerWorld world){
         RegionRecorder recorder = regionRecorderMap.computeIfAbsent(regionName, n -> {
             try {
                 return new RegionRecorder(n, pos1, pos2, world);
@@ -66,13 +64,7 @@ public class RegionRecorder extends ReplayRecorder {
     }
 
     public static CompletableFuture<RegionRecorder> createAsync(String regionName, ChunkPos pos1, ChunkPos pos2, ServerWorld world){
-        return CompletableFuture.supplyAsync(()-> {
-            try {
-                return create(regionName,pos1,pos2,world);
-            } catch (IOException e) {
-                throw new CompletionException(e);
-            }
-        }, ServerSideReplayRecorderServer.recorderExecutor);
+        return CompletableFuture.supplyAsync(()-> create(regionName,pos1,pos2,world), ServerSideReplayRecorderServer.recorderExecutor);
     }
 
     public static final GameProfile FAKE_GAMEPROFILE = new GameProfile(PlayerEntity.getOfflinePlayerUuid("Camera"), "Camera");
@@ -130,9 +122,7 @@ public class RegionRecorder extends ReplayRecorder {
         onPacket(new SynchronizeTagsS2CPacket(ms.getTagManager().toPacket(ms.getRegistryManager())));
 
         //save current player list
-        ms.getPlayerManager().getPlayerList().forEach( p -> {
-            onPacket(new PlayerListS2CPacket(PlayerListS2CPacket.Action.ADD_PLAYER, p));
-        });
+        ms.getPlayerManager().getPlayerList().forEach( p -> onPacket(new PlayerListS2CPacket(PlayerListS2CPacket.Action.ADD_PLAYER, p)));
 
         //save world ( dimension ) information
         WorldBorder worldBorder = world.getWorldBorder();
@@ -212,9 +202,7 @@ public class RegionRecorder extends ReplayRecorder {
         if (Thread.currentThread() == ms.getThread()){
             ((RegionRecorderStorage)world.getChunkManager().threadedAnvilChunkStorage).registerRecorder(this);
         }else{
-            CompletableFuture.runAsync(()->{
-                ((RegionRecorderStorage)world.getChunkManager().threadedAnvilChunkStorage).registerRecorder(this);
-            },ms).join();
+            CompletableFuture.runAsync(()-> ((RegionRecorderStorage)world.getChunkManager().threadedAnvilChunkStorage).registerRecorder(this),ms).join();
         }
 
         //set the replay viewpoint to the center of the watched region

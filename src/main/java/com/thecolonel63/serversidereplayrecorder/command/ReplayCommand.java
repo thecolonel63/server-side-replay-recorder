@@ -23,7 +23,6 @@ import net.minecraft.util.math.ColumnPos;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.time.DurationFormatUtils;
-import org.apache.logging.log4j.core.appender.rolling.FileSize;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -252,7 +251,7 @@ public class ReplayCommand {
                                             context.getSource().sendFeedback(
                                                     new LiteralText("|   |Status: %s"
                                                             .formatted(
-                                                                    (recorder.isOpen()) ? "Recording" : "Saving"
+                                                                    recorder.getStatus().toString()
                                                             )), true);
                                             context.getSource().sendFeedback(
                                                     new LiteralText("|   |Uptime: %s"

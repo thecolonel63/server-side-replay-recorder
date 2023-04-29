@@ -25,7 +25,7 @@ public abstract class EntityTrackerMixin implements RegionRecorderEntityTracker 
     Entity entity;
     @Shadow @Final EntityTrackerEntry entry;
 
-    Set<RegionRecorder> listenening_recorders = new HashSet<>();
+    final Set<RegionRecorder> listenening_recorders = new HashSet<>();
 
     public void updateTrackedStatus(RegionRecorder recorder){
         boolean spectator = false;

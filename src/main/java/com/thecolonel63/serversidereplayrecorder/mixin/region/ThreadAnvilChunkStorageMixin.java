@@ -9,7 +9,6 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityType;
-import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.play.ChunkDataS2CPacket;
 import net.minecraft.network.packet.s2c.play.LightUpdateS2CPacket;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -75,9 +74,7 @@ public abstract class ThreadAnvilChunkStorageMixin implements RegionRecorderStor
     @Override
     public void registerRecorder(RegionRecorder recorder) {
         this.entityTrackers.forEach(
-                (integer, entityTracker) -> {
-                    ((RegionRecorderEntityTracker)entityTracker).updateTrackedStatus(recorder);
-                }
+                (integer, entityTracker) -> ((RegionRecorderEntityTracker)entityTracker).updateTrackedStatus(recorder)
         );
     }
 }

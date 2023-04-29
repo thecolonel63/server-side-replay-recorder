@@ -36,8 +36,6 @@ public class ServerWorldMixin {
     //Block breaking
     @Inject(method = "setBlockBreakingInfo", at = @At("TAIL"))
     private void saveBlockBreakingProgressPacket(int entityId, BlockPos pos, int progress, CallbackInfo ci) {
-        PlayerRecorder.playerRecorderMap.forEach((connection, playerThreadRecorder) -> {
-            playerThreadRecorder.onBlockBreakAnim(entityId, pos, progress);
-        });
+        PlayerRecorder.playerRecorderMap.forEach((connection, playerThreadRecorder) -> playerThreadRecorder.onBlockBreakAnim(entityId, pos, progress));
     }
 }

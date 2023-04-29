@@ -1,7 +1,6 @@
 package com.thecolonel63.serversidereplayrecorder.mixin.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
-import com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer;
 import com.thecolonel63.serversidereplayrecorder.command.ReplayCommand;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;

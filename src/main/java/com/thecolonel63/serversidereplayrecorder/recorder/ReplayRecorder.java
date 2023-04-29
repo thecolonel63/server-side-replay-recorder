@@ -3,11 +3,11 @@ package com.thecolonel63.serversidereplayrecorder.recorder;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonPrimitive;
 import com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer;
 import com.thecolonel63.serversidereplayrecorder.util.FileHandlingUtility;
 import com.thecolonel63.serversidereplayrecorder.util.WrappedPacket;
 import io.netty.buffer.Unpooled;
-import io.netty.util.concurrent.RejectedExecutionHandlers;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.MinecraftVersion;
 import net.minecraft.SharedConstants;
@@ -23,6 +23,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.LiteralText;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Util;
+import net.minecraft.util.math.Position;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -39,8 +40,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public abstract class ReplayRecorder {
 
-    public static final Set<ReplayRecorder> active_recorders = Collections.newSetFromMap(new WeakHashMap<>());
-    public static final Set<ReplayRecorder> writing_recorders = Collections.newSetFromMap(new WeakHashMap<>());
+    public static final Set<ReplayRecorder> active_recorders = new HashSet<>();
+    public static final Set<ReplayRecorder> writing_recorders = new HashSet<>();
     public final MinecraftServer ms = ServerSideReplayRecorderServer.server;
     protected final File tmp_folder;
     protected final File recording_file;
@@ -50,7 +51,7 @@ public abstract class ReplayRecorder {
     protected final FileWriter debugFile;
     protected final AtomicLong start = new AtomicLong();
     protected final AtomicInteger server_start = new AtomicInteger();
-    protected String fileName;
+    protected final String fileName;
     protected NetworkState state = NetworkState.LOGIN;
     protected final AtomicInteger server_timestamp = new AtomicInteger();
 
@@ -58,12 +59,18 @@ public abstract class ReplayRecorder {
     protected final AtomicBoolean startedRecording = new AtomicBoolean(false);
     protected final AtomicBoolean open = new AtomicBoolean(true);
 
+    protected final AtomicReference<ReplayRecorder.ReplayStatus> status = new AtomicReference<>(ReplayRecorder.ReplayStatus.Not_Started);
+
+    public ReplayRecorder.ReplayStatus getStatus() {
+        return this.status.get();
+    }
+
     public boolean isOpen() {
         return open.get();
     }
 
     private static final ThreadFactory fileWriterFactory = new ThreadFactoryBuilder().setNameFormat("Replay-Writer-%d").setDaemon(true).build();
-    protected ThreadPoolExecutor fileWriterExecutor = new ThreadPoolExecutor(1, 1,
+    protected final ThreadPoolExecutor fileWriterExecutor = new ThreadPoolExecutor(1, 1,
             30L, TimeUnit.SECONDS,
             new LinkedBlockingQueue<>(), fileWriterFactory, new ThreadPoolExecutor.DiscardPolicy());
 
@@ -75,7 +82,10 @@ public abstract class ReplayRecorder {
 
     @SuppressWarnings("ResultOfMethodCallIgnored")
     protected ReplayRecorder() throws IOException {
-        tmp_folder = Paths.get(FabricLoader.getInstance().getGameDir().toString(), ServerSideReplayRecorderServer.config.getReplay_folder_name(), "recording_" + this.hashCode()).toFile();
+        if (new File(ServerSideReplayRecorderServer.config.getReplay_folder_name()).isAbsolute())
+            tmp_folder = Paths.get(ServerSideReplayRecorderServer.config.getReplay_folder_name(), "recording_" + this.hashCode()).toFile();
+        else
+            tmp_folder = Paths.get(FabricLoader.getInstance().getGameDir().toString(), ServerSideReplayRecorderServer.config.getReplay_folder_name(), "recording_" + this.hashCode()).toFile();
         tmp_folder.mkdirs();
         recording_file= Paths.get(tmp_folder.getAbsolutePath(), "recording.tmcpr").toFile();
         fileName = String.format("%s.mcpr", new SimpleDateFormat("yyyy-M-dd_HH-mm-ss").format(new Date()));
@@ -86,7 +96,7 @@ public abstract class ReplayRecorder {
 
         //prevent filling storage ( causing server crash )
         if(remaining_space<(storage_required-storage_used)){
-            throw new IOException("No enough space left on device");
+            throw new IOException("Not enough space left on device");
         }
 
         fos = new FileOutputStream(this.recording_file, false);
@@ -96,10 +106,11 @@ public abstract class ReplayRecorder {
             debugFile.write("[{}\n");
         }else
             debugFile = null;
-        writing_recorders.add(this);
+        ReplayRecorder.writing_recorders.add(this);
+        status.set(ReplayStatus.Recording);
     }
 
-    synchronized void writeMetaData(boolean isFinishing) {
+    private void writeMetaData(boolean isFinishing) {
         try {
             String serverName = ServerSideReplayRecorderServer.config.getServer_name();
             JsonObject object = new JsonObject();
@@ -116,10 +127,9 @@ public abstract class ReplayRecorder {
             object.addProperty("selfId", -1);
             object.add("players", new JsonArray());
             FileWriter fw = new FileWriter(tmp_folder + "/metaData.json", false);
-            BufferedWriter bw = new BufferedWriter(fw);
-            bw.write(object.toString());
-            bw.close();
+            fw.write(object.toString());
             fw.close();
+            this.writeMarkers();
             if (isFinishing)
                 compressReplay();
         } catch (IOException ioException) {
@@ -127,6 +137,49 @@ public abstract class ReplayRecorder {
         }finally {
             this.metadataQueued.set(false);
         }
+    }
+
+    private final JsonArray markers = new JsonArray();
+    private void writeMarkers() {
+        try {
+            if (markers.size()>0) {
+                FileWriter fw = new FileWriter(tmp_folder + "/markers.json", false);
+                fw.write(markers.toString());
+                fw.close();
+            }
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
+        }
+    }
+
+    public void addMarker(long timestamp, Position pos) {
+        this.addMarker(timestamp, pos , null);
+    }
+
+    public void addMarker(long timestamp, Position pos, String name) {
+        this.addMarker(timestamp, pos.getX(), pos.getY(), pos.getZ(), 0 ,0 ,0, name);
+    }
+
+    public void addMarker(long timestamp, double x, double y, double z, float yaw, float pitch, float roll) {
+        this.addMarker(timestamp, x, y, z, yaw, pitch, roll, null);
+    }
+    public void addMarker(long timestamp, double x, double y, double z, float yaw, float pitch, float roll, String name){
+        JsonObject entry = new JsonObject();
+        JsonObject value = new JsonObject();
+        JsonObject position = new JsonObject();
+
+        entry.add("realTimestamp", new JsonPrimitive(timestamp));
+        value.add("name", name == null ? null : new JsonPrimitive(name));
+        position.add("x", new JsonPrimitive(x));
+        position.add("y", new JsonPrimitive(y));
+        position.add("z", new JsonPrimitive(z));
+        position.add("yaw", new JsonPrimitive(yaw));
+        position.add("pitch", new JsonPrimitive(pitch));
+        position.add("roll", new JsonPrimitive(roll));
+
+        value.add("position", position);
+        entry.add("value", value);
+        markers.add(entry);
     }
     
     protected abstract String getSaveFolder();
@@ -181,21 +234,25 @@ public abstract class ReplayRecorder {
         if (Thread.currentThread() == ms.getThread()){
             this.onServerTick();
             if (this.open.compareAndSet(true,false)) {
+                this.status.set(ReplayStatus.Saving);
                 active_recorders.remove(this);
                 Runnable endTask = () -> {
                     try {
-                        bos.close();
-                        fos.close();
-                        if (debugFile != null) {
-                            debugFile.write("]");
-                            debugFile.close();
-                        }
+                        try {
+                            bos.close();
+                            fos.close();
+                            if (debugFile != null) {
+                                debugFile.write("]");
+                                debugFile.close();
+                            }
+                        }catch (IOException ignored) {}
 
                         writeMetaData(true);
-                    } catch (IOException e) {
+                    } catch (Throwable e) {
                         e.printStackTrace();
                     } finally {
                         writing_recorders.remove(this);
+                        this.status.set(ReplayStatus.Saved);
                     }
                 };
                 if (immediate) {
@@ -205,9 +262,7 @@ public abstract class ReplayRecorder {
                 } else {
                     //wait for all tasks and close
                     this.fileWriterExecutor.execute(endTask);
-                    new Thread(() -> {
-                        this.fileWriterExecutor.shutdown();
-                    }).start();
+                    new Thread(this.fileWriterExecutor::shutdown).start();
                 }
             }
         }else{
@@ -241,8 +296,9 @@ public abstract class ReplayRecorder {
 
     protected final AtomicReference<Queue<Packet<?>>> packetQueue = new AtomicReference<>(new ConcurrentLinkedQueue<>());
 
-    void save(Packet<?> packet) {
+    protected void save(Packet<?> packet) {
         if (ServerSideReplayRecorderServer.config.use_server_timestamps()) {
+            //queue the packets and wait for the server to complete a tick before saving them
             packetQueue.get().add(packet);
         }else{
             //use a separate thread to write to file ( to not hang up the server )
@@ -264,13 +320,13 @@ public abstract class ReplayRecorder {
 
         if(this.current_file_size.get() > ServerSideReplayRecorderServer.config.getMax_file_size()){
             if (tooBigFileSize.compareAndSet(false,true)) {
-                ServerSideReplayRecorderServer.LOGGER.warn("Max File Size Reached, stopping recording %s".formatted(this.getRecordingName()));
+                ServerSideReplayRecorderServer.LOGGER.warn("Max File Size Reached, stopping recording %s:%s".formatted(this.getClass().getSimpleName(), this.getRecordingName()));
                 this.handleDisconnect(true);
             }
             return;
         }
 
-        //unwrap packets
+        //unwrap packets ( wrapped packets are intended to skip the filters )
         if (packet instanceof WrappedPacket wrappedPacket){
             packet = wrappedPacket.wrappedPacket();
         }
@@ -319,8 +375,8 @@ public abstract class ReplayRecorder {
             }
         } catch (IOException e) {
             if (e.getMessage().equals("No space left on device")){
-                ServerSideReplayRecorderServer.LOGGER.warn("Disk space is too low, stopping recording %s".formatted(this.getRecordingName()));
-                this.handleDisconnect();
+                ServerSideReplayRecorderServer.LOGGER.warn("Disk space is too low, stopping recording %s:%s".formatted(this.getClass().getSimpleName(), this.getRecordingName()));
+                this.handleDisconnect(true);
             }else {
                 e.printStackTrace();
             }
@@ -348,10 +404,20 @@ public abstract class ReplayRecorder {
         return submitted - completed;
     }
 
+    @SuppressWarnings("deprecation")
     @Override
-    public int hashCode() {
-        return (this.getRecordingName()==null)?super.hashCode():this.getRecordingName().hashCode();
+    protected void finalize() throws Throwable {
+        super.finalize();
+        if (ServerSideReplayRecorderServer.config.isDebug()) {
+            ServerSideReplayRecorderServer.LOGGER.debug("Object %s:%s-%d has been deleted!".formatted(this.getClass().getSimpleName(),this.getRecordingName(),this.start.get()));
+        }
     }
 
+    public enum ReplayStatus {
+        Not_Started,
+        Recording,
+        Saving,
+        Saved
+    }
 
 }

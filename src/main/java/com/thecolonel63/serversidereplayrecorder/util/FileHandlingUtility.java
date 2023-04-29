@@ -1,17 +1,12 @@
 package com.thecolonel63.serversidereplayrecorder.util;
 
 import com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer;
+import org.jetbrains.annotations.NotNull;
 
 import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 import java.io.*;
-import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
-import java.security.cert.CertificateException;
-import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -38,8 +33,10 @@ public class FileHandlingUtility {
 
     }
 
-    private static void zipDirectory(File folder, String parentFolder, ZipOutputStream zos) throws IOException {
-        for (File file : folder.listFiles()) {
+    private static void zipDirectory(@NotNull File folder, String parentFolder, ZipOutputStream zos) throws IOException {
+        File[] list = folder.listFiles();
+        assert list != null: "%s is not a directory".formatted(folder);
+        for (File file : list) {
             if (file.isDirectory()) {
                 zipDirectory(file, parentFolder + "/" + file.getName(), zos);
                 continue;
