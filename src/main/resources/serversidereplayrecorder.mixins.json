@@ -3,27 +3,23 @@
   "minVersion": "0.8",
   "package": "com.thecolonel63.serversidereplayrecorder.mixin",
   "compatibilityLevel": "JAVA_17",
-  "mixins": [
-  ],
-  "client": [
-  ],
   "server": [
-    "commands.CommandManagerMixin",
     "LightUpdatePacketMixin",
-    "region.ChunkHolderMixin",
-    "region.EntityTrackerMixin",
-    "region.MinecraftServerMixin",
-    "region.PlayerManagerMixin",
-    "region.ServerPlayerInteractionManagerMixin",
-    "region.ServerPlayNetworkHandlerMixin",
-    "region.ServerWorldMixin",
-    "region.ThreadAnvilChunkStorageMixin",
+    "commands.CommandManagerMixin",
     "main.LoginSuccessfulS2CPacketAccessor",
     "main.MinecraftServerMixin",
     "player.NetHandlerPlayServerFakeMixin",
     "player.PlayerManagerMixin",
     "player.ServerPlayNetworkHandlerMixin",
-    "player.ServerWorldMixin"
+    "player.ServerWorldMixin",
+    "region.ChunkHolderMixin",
+    "region.EntityTrackerMixin",
+    "region.MinecraftServerMixin",
+    "region.PlayerManagerMixin",
+    "region.ServerPlayerInteractionManagerMixin",
+    "region.ServerWorldMixin",
+    "region.ThreadAnvilChunkStorageMixin",
+    "region.EntityPlayerMPFakeMixin"
   ],
   "injectors": {
     "defaultRequire": 1

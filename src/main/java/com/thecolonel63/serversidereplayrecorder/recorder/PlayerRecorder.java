@@ -12,9 +12,10 @@ import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.ClientConnection;
-import net.minecraft.network.Packet;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;
 import net.minecraft.network.packet.s2c.play.*;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
@@ -97,7 +98,7 @@ public class PlayerRecorder extends ReplayRecorder {
             ServerPlayerEntity player = ms.getPlayerManager().getPlayer(playerId);
             if (player == null) return;
             onPacket(new PlayerSpawnS2CPacket(player));
-            onPacket(new EntityTrackerUpdateS2CPacket(player.getId(), player.getDataTracker(), false));
+            onPacket(new EntityTrackerUpdateS2CPacket(player.getId(), player.getDataTracker().getChangedEntries()));
             playerSpawned = true;
             lastX = lastY = lastZ = null;
         } catch (Exception e) {
@@ -210,10 +211,10 @@ public class PlayerRecorder extends ReplayRecorder {
         }
     }
 
-    public void onClientSound(SoundEvent sound, SoundCategory category, double x, double y, double z, float volume, float pitch) {
+    public void onClientSound(RegistryEntry<SoundEvent> sound, SoundCategory category, double x, double y, double z, float volume, float pitch, long seed) {
         try {
             // Send to all other players in ServerWorldEventHandler#playSoundToAllNearExcept
-            onPacket(new PlaySoundS2CPacket(sound, category, x, y, z, volume, pitch));
+            onPacket(new PlaySoundS2CPacket(sound, category, x, y, z, volume, pitch, seed));
         } catch (Exception e) {
             e.printStackTrace();
         }

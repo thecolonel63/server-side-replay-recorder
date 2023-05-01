@@ -3,7 +3,7 @@ package com.thecolonel63.serversidereplayrecorder.mixin.region;
 import com.thecolonel63.serversidereplayrecorder.recorder.RegionRecorder;
 import com.thecolonel63.serversidereplayrecorder.util.interfaces.RegionRecorderEntityTracker;
 import net.minecraft.entity.Entity;
-import net.minecraft.network.Packet;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.play.EntitiesDestroyS2CPacket;
 import net.minecraft.server.network.EntityTrackerEntry;
 import net.minecraft.server.network.ServerPlayerEntity;

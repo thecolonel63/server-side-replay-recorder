@@ -64,8 +64,7 @@ public abstract class ThreadAnvilChunkStorageMixin implements RegionRecorderStor
             Set<RegionRecorder> recorders = ((RegionRecorderWorld)this.world).getRegionRecordersByExpandedChunk().get(holder.getPos());
             if (recorders != null)
                 recorders.forEach( r -> {
-                    r.onPacket(new ChunkDataS2CPacket(worldChunk));
-                    r.onPacket(new LightUpdateS2CPacket(worldChunk.getPos(), this.getLightingProvider(), null, null, true));
+                    r.onPacket(new ChunkDataS2CPacket(worldChunk, this.getLightingProvider(), null, null, true));
                 });
         }));
     }

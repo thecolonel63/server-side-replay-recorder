@@ -2,7 +2,7 @@ package com.thecolonel63.serversidereplayrecorder.mixin.region;
 
 import com.thecolonel63.serversidereplayrecorder.recorder.RegionRecorder;
 import com.thecolonel63.serversidereplayrecorder.util.interfaces.RegionRecorderWorld;
-import net.minecraft.network.Packet;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.server.world.ChunkHolder;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.world.HeightLimitView;

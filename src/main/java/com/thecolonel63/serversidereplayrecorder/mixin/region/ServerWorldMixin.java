@@ -7,13 +7,11 @@ import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.network.packet.s2c.play.BlockBreakingProgressS2CPacket;
 import net.minecraft.network.packet.s2c.play.ExplosionS2CPacket;
 import net.minecraft.network.packet.s2c.play.ParticleS2CPacket;
-import net.minecraft.network.packet.s2c.play.VibrationS2CPacket;
 import net.minecraft.particle.ParticleEffect;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.Vibration;
 import net.minecraft.world.explosion.Explosion;
 import net.minecraft.world.explosion.ExplosionBehavior;
 import org.spongepowered.asm.mixin.Mixin;
@@ -64,6 +62,8 @@ public class ServerWorldMixin implements RegionRecorderWorld {
         );
     }
 
+    //this part of the code seems to have disappeared
+    /*
     @Inject(method = "sendVibrationPacket", at = @At(value = "TAIL"))
     private void handleVibration(Vibration vibration, CallbackInfo ci) {
         BlockPos pos = vibration.getOrigin();
@@ -71,6 +71,7 @@ public class ServerWorldMixin implements RegionRecorderWorld {
                 r -> r.onPacket(new VibrationS2CPacket(vibration))
         );
     }
+    */
 
     @Inject(method = "spawnParticles(Lnet/minecraft/particle/ParticleEffect;DDDIDDDD)I", at = @At(value = "TAIL"))
     private <T extends ParticleEffect> void handleParticles(T particle, double x, double y, double z, int count, double deltaX, double deltaY, double deltaZ, double speed, CallbackInfoReturnable<Integer> cir) {

@@ -1,6 +1,6 @@
 package com.thecolonel63.serversidereplayrecorder.util;
 
-import net.minecraft.network.Packet;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.PacketListener;
 

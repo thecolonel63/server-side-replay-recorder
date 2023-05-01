@@ -10,24 +10,23 @@ import com.thecolonel63.serversidereplayrecorder.util.interfaces.RegionRecorderW
 import io.netty.buffer.Unpooled;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.entity.player.PlayerAbilities;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.network.Packet;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;
 import net.minecraft.network.packet.s2c.play.*;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.registry.tag.TagPacketSerializer;
+import net.minecraft.resource.featuretoggle.FeatureFlags;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.util.Uuids;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Vec3i;
-import net.minecraft.util.registry.DynamicRegistryManager;
 import net.minecraft.world.GameMode;
 import net.minecraft.world.GameRules;
 import net.minecraft.world.Heightmap;
 import net.minecraft.world.WorldProperties;
-import net.minecraft.world.biome.source.BiomeAccess;
 import net.minecraft.world.border.WorldBorder;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkStatus;
@@ -68,7 +67,7 @@ public class RegionRecorder extends ReplayRecorder {
         return CompletableFuture.supplyAsync(()-> create(regionName,pos1,pos2,world), ServerSideReplayRecorderServer.recorderExecutor);
     }
 
-    public static final GameProfile FAKE_GAMEPROFILE = new GameProfile(PlayerEntity.getOfflinePlayerUuid("Camera"), "Camera");
+    public static final GameProfile FAKE_GAMEPROFILE = new GameProfile(Uuids.getOfflinePlayerUuid("Camera"), "Camera");
 
     public static final String REGION_FOLDER = "region";
 
@@ -100,27 +99,32 @@ public class RegionRecorder extends ReplayRecorder {
         //save basic login packets
         onPacket(new GameJoinS2CPacket(
                 0,
-                GameMode.SPECTATOR,
-                GameMode.SPECTATOR,
-                BiomeAccess.hashSeed(world.getSeed()),
                 worldProperties.isHardcore(),
+                GameMode.SPECTATOR,
+                GameMode.SPECTATOR,
                 ms.getWorldRegistryKeys(),
-                (DynamicRegistryManager.Impl) ms.getRegistryManager(),
-                world.getDimension(),
+                ms.getRegistryManager().toImmutable(),
+                world.getDimensionKey(),
                 world.getRegistryKey(),
+                world.getSeed(),
                 ms.getMaxPlayerCount(),
+                region.radius,
                 region.radius,
                 false,
                 false,
                 world.isDebugWorld(),
-                world.isFlat()
+                world.isFlat(),
+                Optional.empty()
         ));
+        onPacket(new FeaturesS2CPacket(FeatureFlags.FEATURE_MANAGER.toId(world.getEnabledFeatures())));
         onPacket(
                 new CustomPayloadS2CPacket(CustomPayloadS2CPacket.BRAND, new PacketByteBuf(Unpooled.buffer()).writeString(ms.getServerModName()))
         );
         onPacket(new DifficultyS2CPacket(worldProperties.getDifficulty(), worldProperties.isDifficultyLocked()));
         onPacket(new PlayerAbilitiesS2CPacket(new PlayerAbilities()));
-        onPacket(new SynchronizeTagsS2CPacket(ms.getTagManager().toPacket(ms.getRegistryManager())));
+        onPacket(new UpdateSelectedSlotS2CPacket(0));
+        onPacket(new SynchronizeRecipesS2CPacket(ms.getRecipeManager().values()));
+        onPacket(new SynchronizeTagsS2CPacket(TagPacketSerializer.serializeTags(ms.getCombinedDynamicRegistries())));
 
         //save current player list
         ms.getPlayerManager().getPlayerList().forEach( p -> onPacket(new PlayerListS2CPacket(PlayerListS2CPacket.Action.ADD_PLAYER, p)));
@@ -135,9 +139,9 @@ public class RegionRecorder extends ReplayRecorder {
             onPacket(new GameStateChangeS2CPacket(GameStateChangeS2CPacket.RAIN_GRADIENT_CHANGED, world.getRainGradient(1.0F)));
             onPacket(new GameStateChangeS2CPacket(GameStateChangeS2CPacket.THUNDER_GRADIENT_CHANGED, world.getThunderGradient(1.0F)));
         }
-        if (!ms.getResourcePackUrl().isEmpty()) {
-            onPacket(new ResourcePackSendS2CPacket(ms.getResourcePackUrl(), ms.getResourcePackHash(), ms.requireResourcePack(), ms.getResourcePackPrompt()));
-        }
+        ms
+                .getResourcePackProperties()
+                .ifPresent(properties -> onPacket(new ResourcePackSendS2CPacket(properties.url(), properties.hash(), properties.isRequired(), properties.prompt())));
 
         //register as world (dimension) event listeners
         ((RegionRecorderWorld) world).getRegionRecorders().add(this);
@@ -191,8 +195,9 @@ public class RegionRecorder extends ReplayRecorder {
                         this.viewpoint = new Vec3i(viewpoint.getX(), surface_y + 1, viewpoint.getZ());
                 }
                 //save chunk
-                onPacket(new WrappedPacket(new ChunkDataS2CPacket(worldChunk)));
-                onPacket(new WrappedPacket(new LightUpdateS2CPacket(pos, world.getLightingProvider(), null, null, true)));
+                onPacket(new WrappedPacket(new ChunkDataS2CPacket(worldChunk, world.getLightingProvider(), null, null, true)));
+                //--obsolete in new versions
+                //onPacket(new WrappedPacket(new LightUpdateS2CPacket(pos, world.getLightingProvider(), null, null, true)));
                 known_chunk_data.add(pos);
                 known_chunk_light.add(pos);
             }
@@ -207,8 +212,7 @@ public class RegionRecorder extends ReplayRecorder {
         }
 
         //set the replay viewpoint to the center of the watched region
-        onPacket(new PlayerPositionLookS2CPacket(viewpoint.getX() + 0.5,viewpoint.getY(),viewpoint.getZ() + 0.5,0,0, Collections.emptySet(),0,false));
-
+        onPacket(new PlayerPositionLookS2CPacket(viewpoint.getX() + 0.5d,viewpoint.getY(),viewpoint.getZ() + 0.5d,0f,0f, Collections.emptySet(),0));
         //ready to record changes
     }
 

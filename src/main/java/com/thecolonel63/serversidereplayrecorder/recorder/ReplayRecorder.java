@@ -13,14 +13,14 @@ import net.minecraft.MinecraftVersion;
 import net.minecraft.SharedConstants;
 import net.minecraft.network.NetworkSide;
 import net.minecraft.network.NetworkState;
-import net.minecraft.network.Packet;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.packet.s2c.login.LoginCompressionS2CPacket;
 import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;
 import net.minecraft.network.packet.s2c.play.LightUpdateS2CPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.LiteralText;
+import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Util;
 
@@ -118,7 +118,7 @@ public abstract class ReplayRecorder {
             object.addProperty("customServerName", serverName + " | " + this.getRecordingName());
             object.addProperty("duration", last_timestamp);
             object.addProperty("date", start);
-            object.addProperty("mcversion", MinecraftVersion.GAME_VERSION.getName());
+            object.addProperty("mcversion", MinecraftVersion.CURRENT.getName());
             object.addProperty("fileFormat", "MCPR");
             object.addProperty("fileFormatVersion", 14); //Unlikely to change any time soon, last time this was updates was several major versions ago.
             object.addProperty("protocol", SharedConstants.getProtocolVersion());
@@ -188,7 +188,7 @@ public abstract class ReplayRecorder {
             FileHandlingUtility.zip(Arrays.asList(filesToCompress), this.out_file.getAbsolutePath(), true, tmp_folder);
             for(ServerPlayerEntity serverPlayerEntity : ms.getPlayerManager().getPlayerList()) {
                 if (ms.getPlayerManager().isOperator(serverPlayerEntity.getGameProfile())) {
-                    serverPlayerEntity.sendSystemMessage(new LiteralText("Replay %s Saved".formatted(this.out_file)).formatted(Formatting.YELLOW), Util.NIL_UUID);
+                    serverPlayerEntity.sendMessage(Text.literal("Replay %s Saved".formatted(this.out_file)).formatted(Formatting.YELLOW));
                 }
             }
         } catch (Exception e) {
