@@ -242,6 +242,14 @@ public class PlayerRecorder extends ReplayRecorder {
         return Duration.between(start_time, LocalDateTime.now());
     }
 
+    @Override
+    public void addMarker(String name) {
+        ServerPlayerEntity player = ms.getPlayerManager().getPlayer(playerId);
+        if (player == null)
+            super.addMarker(name);
+        else
+            this.addMarker(player.getX(), player.getY(), player.getZ(), player.getYaw(), player.getPitch(), player.getRoll(), name);
+    }
 
     @Override
     public boolean equals(Object obj) {

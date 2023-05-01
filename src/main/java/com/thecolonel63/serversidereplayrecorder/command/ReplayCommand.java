@@ -11,10 +11,12 @@ import com.thecolonel63.serversidereplayrecorder.recorder.ReplayRecorder;
 import com.thecolonel63.serversidereplayrecorder.util.FileHandlingUtility;
 import net.minecraft.command.CommandSource;
 import net.minecraft.command.argument.ColumnPosArgumentType;
+import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.command.argument.GameProfileArgumentType;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.LiteralText;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.math.ChunkPos;
@@ -388,6 +390,51 @@ public class ReplayCommand {
                                         CommandManager.literal("region")
                                                 .then(
                                                         handleFile(RegionRecorder.REGION_FOLDER)
+                                                )
+                                )
+                ).then(
+                        CommandManager.literal("marker")
+                                .then(
+                                        CommandManager.literal("player")
+                                                .then(
+                                                        CommandManager.argument("player", EntityArgumentType.player())
+                                                                .executes(
+                                                                        context -> {
+                                                                            ServerPlayerEntity player = EntityArgumentType.getPlayer(context, "player");
+                                                                            PlayerRecorder recorder = PlayerRecorder.playerRecorderMap.get(player.networkHandler.connection);
+                                                                            if (recorder != null) {
+                                                                                recorder.addMarker(null);
+                                                                                return 0;
+                                                                            } else {
+                                                                                context.getSource().sendError(new LiteralText("Unknown Player %s or Player not Recording".formatted(player.getGameProfile().getName())).formatted(Formatting.RED));
+                                                                                return 1;
+                                                                            }
+                                                                        }
+                                                                )
+                                                )
+                                ).then(
+                                        CommandManager.literal("region")
+                                                .then(
+                                                        CommandManager.argument("regionName", StringArgumentType.word())
+                                                                .suggests(
+                                                                        (context, builder) -> CommandSource.suggestMatching(
+                                                                                RegionRecorder.regionRecorderMap.keySet(),
+                                                                                builder
+                                                                        )
+                                                                )
+                                                                .executes(
+                                                                        context -> {
+                                                                            String regionName = StringArgumentType.getString(context, "regionName");
+                                                                            RegionRecorder recorder = RegionRecorder.regionRecorderMap.get(regionName);
+                                                                            if (recorder != null) {
+                                                                                recorder.addMarker(null);
+                                                                                return 0;
+                                                                            } else {
+                                                                                context.getSource().sendError(new LiteralText("Unknown Region %s".formatted(regionName)).formatted(Formatting.RED));
+                                                                                return 1;
+                                                                            }
+                                                                        }
+                                                                )
                                                 )
                                 )
                 )

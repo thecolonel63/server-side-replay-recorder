@@ -23,7 +23,6 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.LiteralText;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Util;
-import net.minecraft.util.math.Position;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -152,23 +151,16 @@ public abstract class ReplayRecorder {
         }
     }
 
-    public void addMarker(long timestamp, Position pos) {
-        this.addMarker(timestamp, pos , null);
+    public void addMarker(String name) {
+        this.addMarker(0,0,0,0,0,0, name);
     }
 
-    public void addMarker(long timestamp, Position pos, String name) {
-        this.addMarker(timestamp, pos.getX(), pos.getY(), pos.getZ(), 0 ,0 ,0, name);
-    }
-
-    public void addMarker(long timestamp, double x, double y, double z, float yaw, float pitch, float roll) {
-        this.addMarker(timestamp, x, y, z, yaw, pitch, roll, null);
-    }
-    public void addMarker(long timestamp, double x, double y, double z, float yaw, float pitch, float roll, String name){
+    public void addMarker(double x, double y, double z, float yaw, float pitch, float roll, String name){
         JsonObject entry = new JsonObject();
         JsonObject value = new JsonObject();
         JsonObject position = new JsonObject();
 
-        entry.add("realTimestamp", new JsonPrimitive(timestamp));
+        entry.add("realTimestamp", new JsonPrimitive(this.last_timestamp));
         value.add("name", name == null ? null : new JsonPrimitive(name));
         position.add("x", new JsonPrimitive(x));
         position.add("y", new JsonPrimitive(y));

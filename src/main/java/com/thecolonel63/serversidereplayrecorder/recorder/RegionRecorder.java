@@ -16,6 +16,7 @@ import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;
 import net.minecraft.network.packet.s2c.play.*;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.BlockPos;
@@ -281,6 +282,11 @@ public class RegionRecorder extends ReplayRecorder {
         }));
         //un-register as an entity watcher
         ((RegionRecorderStorage)world.getChunkManager().threadedAnvilChunkStorage).registerRecorder(this);
+    }
+
+    @Override
+    public void addMarker(String name) {
+        this.addMarker(viewpoint.getX(), viewpoint.getY(), viewpoint.getZ(), 0, 0, 0, name);
     }
 
     @Override
