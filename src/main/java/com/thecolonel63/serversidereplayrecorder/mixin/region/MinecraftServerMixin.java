@@ -18,7 +18,7 @@ import java.util.function.BooleanSupplier;
 @Mixin(MinecraftServer.class)
 public class MinecraftServerMixin {
 
-    @Inject(method = "tickWorlds", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/PlayerManager;sendToDimension(Lnet/minecraft/network/Packet;Lnet/minecraft/util/registry/RegistryKey;)V"), locals = LocalCapture.CAPTURE_FAILHARD)
+    @Inject(method = "tickWorlds", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/MinecraftServer;sendTimeUpdatePackets(Lnet/minecraft/server/world/ServerWorld;)V"), locals = LocalCapture.CAPTURE_FAILHARD)
     void handleWorldTime(BooleanSupplier shouldKeepTicking, CallbackInfo ci, Iterator var2, ServerWorld serverWorld){
         ((RegionRecorderWorld)serverWorld).getRegionRecorders().forEach( r -> r.onPacket(new WorldTimeUpdateS2CPacket(serverWorld.getTime(), serverWorld.getTimeOfDay(), serverWorld.getGameRules().getBoolean(GameRules.DO_DAYLIGHT_CYCLE))));
     }
