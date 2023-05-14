@@ -6,6 +6,7 @@ import com.thecolonel63.serversidereplayrecorder.recorder.PlayerRecorder;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.message.MessageType;
 import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;
+import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
@@ -22,6 +23,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 
 import static com.thecolonel63.serversidereplayrecorder.recorder.PlayerRecorder.playerRecorderMap;
 

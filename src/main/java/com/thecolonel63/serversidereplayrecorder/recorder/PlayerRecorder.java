@@ -4,6 +4,8 @@ import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Pair;
 import com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer;
 import com.thecolonel63.serversidereplayrecorder.mixin.main.LoginSuccessfulS2CPacketAccessor;
+import com.thecolonel63.serversidereplayrecorder.mixin.player.EntityTrackerAccessor;
+import com.thecolonel63.serversidereplayrecorder.mixin.player.ThreadedAnvilChunkStorageAccessor;
 import com.thecolonel63.serversidereplayrecorder.util.WrappedPacket;
 import com.thecolonel63.serversidereplayrecorder.util.interfaces.LightUpdatePacketAccessor;
 import net.fabricmc.loader.api.FabricLoader;
@@ -17,6 +19,7 @@ import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;
 import net.minecraft.network.packet.s2c.play.*;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ThreadedAnvilChunkStorage;
 import net.minecraft.sound.SoundCategory;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.util.Hand;
@@ -66,6 +69,7 @@ public class PlayerRecorder extends ReplayRecorder {
 
 
     public void onPacket(Packet<?> packet) {
+
         if (packet instanceof LightUpdateS2CPacket lightUpdateS2CPacket){
             if(((LightUpdatePacketAccessor)lightUpdateS2CPacket).isOnChunkLoad()){
                 //be sure to record new chunk light packets
@@ -81,9 +85,13 @@ public class PlayerRecorder extends ReplayRecorder {
 
         super.onPacket(packet);
 
-        if (!playerSpawned && packet instanceof PlayerListS2CPacket playerList) {
+        /*if (!playerSpawned && packet instanceof PlayerListS2CPacket playerList) {
             if (playerList.getActions().contains(PlayerListS2CPacket.Action.ADD_PLAYER) && playerList.entries.stream().anyMatch(e -> e.profileId() == playerId))
                 spawnRecordingPlayer();
+        }*/
+
+        if (!playerSpawned && packet instanceof InventoryS2CPacket) {
+            spawnRecordingPlayer();
         }
 
         if (!isRespawning && packet instanceof PlayerRespawnS2CPacket) {
@@ -104,8 +112,9 @@ public class PlayerRecorder extends ReplayRecorder {
         try {
             ServerPlayerEntity player = ms.getPlayerManager().getPlayer(playerId);
             if (player == null) return;
-            onPacket(new PlayerSpawnS2CPacket(player));
-            onPacket(new EntityTrackerUpdateS2CPacket(player.getId(), player.getDataTracker().getChangedEntries()));
+            ThreadedAnvilChunkStorage.EntityTracker playerTracker = ((ThreadedAnvilChunkStorageAccessor)player.getWorld().getChunkManager().threadedAnvilChunkStorage).getEntityTrackers().get(player.getId());
+            if (playerTracker == null) return;
+            ((EntityTrackerAccessor)playerTracker).getEntry().sendPackets(this::onPacket);
             playerSpawned = true;
             lastX = lastY = lastZ = null;
         } catch (Exception e) {

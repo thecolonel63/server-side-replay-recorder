@@ -8,20 +8,24 @@
     "commands.CommandManagerMixin",
     "main.LoginSuccessfulS2CPacketAccessor",
     "main.MinecraftServerMixin",
+    "player.EntityTrackerAccessor",
     "player.NetHandlerPlayServerFakeMixin",
     "player.PlayerManagerMixin",
     "player.ServerPlayNetworkHandlerMixin",
     "player.ServerWorldMixin",
+    "player.ThreadedAnvilChunkStorageAccessor",
     "region.ChunkHolderMixin",
+    "region.EntityPlayerMPFakeMixin",
     "region.EntityTrackerMixin",
     "region.MinecraftServerMixin",
     "region.PlayerManagerMixin",
     "region.ServerPlayerInteractionManagerMixin",
     "region.ServerWorldMixin",
-    "region.ThreadAnvilChunkStorageMixin",
-    "region.EntityPlayerMPFakeMixin"
+    "region.ThreadAnvilChunkStorageMixin"
   ],
   "injectors": {
     "defaultRequire": 1
-  }
+  },
+  "mixins": [
+  ]
 }

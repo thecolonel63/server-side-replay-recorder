@@ -13,10 +13,12 @@ import net.minecraft.MinecraftVersion;
 import net.minecraft.SharedConstants;
 import net.minecraft.network.NetworkSide;
 import net.minecraft.network.NetworkState;
+import net.minecraft.network.listener.ClientPlayPacketListener;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.packet.s2c.login.LoginCompressionS2CPacket;
 import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;
+import net.minecraft.network.packet.s2c.play.BundleS2CPacket;
 import net.minecraft.network.packet.s2c.play.LightUpdateS2CPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -219,6 +221,13 @@ public abstract class ReplayRecorder {
 
         if(packet instanceof LightUpdateS2CPacket)
             return; //skip LightUpdates to greatly reduce file size ( client ignores them anyway )
+
+        if(packet instanceof BundleS2CPacket bundleS2CPacket){
+            for (Packet<?> bundle_packet : bundleS2CPacket.getPackets()){
+                this.onPacket(bundle_packet);
+            }
+            return;
+        }
 
         save(packet);
     }
