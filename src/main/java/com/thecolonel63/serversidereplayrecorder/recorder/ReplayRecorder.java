@@ -107,34 +107,38 @@ public abstract class ReplayRecorder {
             debugFile = null;
         ReplayRecorder.writing_recorders.add(this);
         status.set(ReplayStatus.Recording);
+        ServerSideReplayRecorderServer.LOGGER.info("Started recording %s:%s".formatted(this.getClass().getSimpleName(), this.getRecordingName()));
     }
 
+    AtomicBoolean compressing = new AtomicBoolean(false);
     private void writeMetaData(boolean isFinishing) {
-        try {
-            String serverName = ServerSideReplayRecorderServer.config.getServer_name();
-            JsonObject object = new JsonObject();
-            object.addProperty("singleplayer", false);
-            object.addProperty("serverName", serverName);
-            object.addProperty("customServerName", serverName + " | " + this.getRecordingName());
-            object.addProperty("duration", last_timestamp);
-            object.addProperty("date", start);
-            object.addProperty("mcversion", MinecraftVersion.CURRENT.getName());
-            object.addProperty("fileFormat", "MCPR");
-            object.addProperty("fileFormatVersion", 14); //Unlikely to change any time soon, last time this was updates was several major versions ago.
-            object.addProperty("protocol", SharedConstants.getProtocolVersion());
-            object.addProperty("generator", "mattymatty's enhanced thecolonel63's Server Side Replay Recorder");
-            object.addProperty("selfId", -1);
-            object.add("players", new JsonArray());
-            FileWriter fw = new FileWriter(tmp_folder + "/metaData.json", false);
-            fw.write(object.toString());
-            fw.close();
-            this.writeMarkers();
-            if (isFinishing)
-                compressReplay();
-        } catch (IOException ioException) {
-            ioException.printStackTrace();
-        }finally {
-            this.metadataQueued.set(false);
+        if (compressing.compareAndSet(false, isFinishing)) {
+            try {
+                String serverName = ServerSideReplayRecorderServer.config.getServer_name();
+                JsonObject object = new JsonObject();
+                object.addProperty("singleplayer", false);
+                object.addProperty("serverName", serverName);
+                object.addProperty("customServerName", serverName + " | " + this.getRecordingName());
+                object.addProperty("duration", last_timestamp);
+                object.addProperty("date", start);
+                object.addProperty("mcversion", MinecraftVersion.CURRENT.getName());
+                object.addProperty("fileFormat", "MCPR");
+                object.addProperty("fileFormatVersion", 14); //Unlikely to change any time soon, last time this was updates was several major versions ago.
+                object.addProperty("protocol", SharedConstants.getProtocolVersion());
+                object.addProperty("generator", "mattymatty's enhanced thecolonel63's Server Side Replay Recorder");
+                object.addProperty("selfId", -1);
+                object.add("players", new JsonArray());
+                FileWriter fw = new FileWriter(Paths.get(tmp_folder.getAbsolutePath(), "metaData.json").toFile(), false);
+                fw.write(object.toString());
+                fw.close();
+                this.writeMarkers();
+                if (isFinishing)
+                    compressReplay();
+            } catch (IOException ioException) {
+                ioException.printStackTrace();
+            } finally {
+                this.metadataQueued.set(false);
+            }
         }
     }
 
@@ -142,7 +146,7 @@ public abstract class ReplayRecorder {
     private void writeMarkers() {
         try {
             if (markers.size()>0) {
-                FileWriter fw = new FileWriter(tmp_folder + "/markers.json", false);
+                FileWriter fw = new FileWriter(Paths.get(tmp_folder.getAbsolutePath(), "markers.json").toFile(), false);
                 fw.write(markers.toString());
                 fw.close();
             }
@@ -191,6 +195,7 @@ public abstract class ReplayRecorder {
                     serverPlayerEntity.sendMessage(Text.literal("Replay %s Saved".formatted(this.out_file)).formatted(Formatting.YELLOW));
                 }
             }
+            ServerSideReplayRecorderServer.LOGGER.info("Replay %s Saved".formatted(this.out_file));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -227,6 +232,7 @@ public abstract class ReplayRecorder {
             this.onServerTick();
             if (this.open.compareAndSet(true,false)) {
                 this.status.set(ReplayStatus.Saving);
+                ServerSideReplayRecorderServer.LOGGER.info("Stopping recording %s:%s".formatted(this.getClass().getSimpleName(), this.getRecordingName()));
                 active_recorders.remove(this);
                 Runnable endTask = () -> {
                     try {

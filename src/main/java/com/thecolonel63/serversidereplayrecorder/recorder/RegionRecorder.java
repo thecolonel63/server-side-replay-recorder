@@ -33,6 +33,7 @@ import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.ReadOnlyChunk;
 import net.minecraft.world.chunk.WorldChunk;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.*;
@@ -255,7 +256,10 @@ public class RegionRecorder extends ReplayRecorder {
     @Override
     protected String getSaveFolder(){
         String name = (this.regionName != null) ? this.regionName : "NONAME";
-        return Paths.get(FabricLoader.getInstance().getGameDir().toString(), ServerSideReplayRecorderServer.config.getReplay_folder_name(), REGION_FOLDER,name).toString();
+        if (new File(ServerSideReplayRecorderServer.config.getReplay_folder_name()).isAbsolute())
+            return Paths.get(ServerSideReplayRecorderServer.config.getReplay_folder_name(), REGION_FOLDER,name).toString();
+        else
+            return Paths.get(FabricLoader.getInstance().getGameDir().toString(), ServerSideReplayRecorderServer.config.getReplay_folder_name(), REGION_FOLDER,name).toString();
     }
 
     @Override

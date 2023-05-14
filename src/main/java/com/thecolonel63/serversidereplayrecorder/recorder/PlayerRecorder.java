@@ -22,6 +22,7 @@ import net.minecraft.sound.SoundEvent;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.time.Duration;
@@ -57,7 +58,10 @@ public class PlayerRecorder extends ReplayRecorder {
     @Override
     protected String getSaveFolder(){
         String name = (playerName != null) ? playerName : "NONAME";
-        return Paths.get(FabricLoader.getInstance().getGameDir().toString(), ServerSideReplayRecorderServer.config.getReplay_folder_name(), PLAYER_FOLDER,name).toString();
+        if (new File(ServerSideReplayRecorderServer.config.getReplay_folder_name()).isAbsolute())
+            return Paths.get(ServerSideReplayRecorderServer.config.getReplay_folder_name(), PLAYER_FOLDER,name).toString();
+        else
+            return Paths.get(FabricLoader.getInstance().getGameDir().toString(), ServerSideReplayRecorderServer.config.getReplay_folder_name(), PLAYER_FOLDER,name).toString();
     }
 
 
@@ -78,12 +82,13 @@ public class PlayerRecorder extends ReplayRecorder {
             }
         }
 
-        super.onPacket(packet);
         if (packet instanceof LoginSuccessS2CPacket loginSuccessS2CPacket) {
             GameProfile profile = ((LoginSuccessfulS2CPacketAccessor) loginSuccessS2CPacket).getProfile();
             playerId = profile.getId();
             playerName = profile.getName();
         }
+
+        super.onPacket(packet);
     }
 
     @Override
