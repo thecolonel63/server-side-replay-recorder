@@ -28,9 +28,6 @@ import static com.thecolonel63.serversidereplayrecorder.recorder.PlayerRecorder.
 @Mixin(PlayerManager.class)
 public abstract class PlayerManagerMixin {
 
-    @Shadow @Final private static Logger LOGGER;
-
-
     @Shadow public abstract boolean isOperator(GameProfile profile);
 
     @Shadow public abstract List<ServerPlayerEntity> getPlayerList();

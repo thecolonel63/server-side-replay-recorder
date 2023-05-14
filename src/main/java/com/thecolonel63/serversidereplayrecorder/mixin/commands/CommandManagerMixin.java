@@ -2,6 +2,7 @@ package com.thecolonel63.serversidereplayrecorder.mixin.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.thecolonel63.serversidereplayrecorder.command.ReplayCommand;
+import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import org.spongepowered.asm.mixin.Final;
@@ -17,8 +18,8 @@ public abstract class CommandManagerMixin {
     @Final
     private CommandDispatcher<ServerCommandSource> dispatcher;
 
-    @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Lcom/mojang/brigadier/CommandDispatcher;findAmbiguities(Lcom/mojang/brigadier/AmbiguityConsumer;)V", shift = At.Shift.BEFORE))
-    private void fabric_addCommands(CommandManager.RegistrationEnvironment environment, CallbackInfo ci) {
+    @Inject(method = "<init>", at = @At(value = "INVOKE", target = "Lcom/mojang/brigadier/CommandDispatcher;setConsumer(Lcom/mojang/brigadier/ResultConsumer;)V", shift = At.Shift.BEFORE))
+    private void fabric_addCommands(CommandManager.RegistrationEnvironment environment, CommandRegistryAccess commandRegistryAccess, CallbackInfo ci) {
         if (environment.dedicated) {
             ReplayCommand cmd = new ReplayCommand();
             cmd.register(dispatcher);
