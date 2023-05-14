@@ -66,15 +66,6 @@ public class PlayerRecorder extends ReplayRecorder {
 
 
     public void onPacket(Packet<?> packet) {
-        if (!playerSpawned && packet instanceof PlayerListS2CPacket) {
-            spawnRecordingPlayer();
-        }
-
-        if (!isRespawning && packet instanceof PlayerRespawnS2CPacket) {
-            //Catches a dimension change that isn't technically a respawn, but should still be count as one.
-            spawnRecordingPlayer();
-        }
-
         if (packet instanceof LightUpdateS2CPacket lightUpdateS2CPacket){
             if(((LightUpdatePacketAccessor)lightUpdateS2CPacket).isOnChunkLoad()){
                 //be sure to record new chunk light packets
@@ -89,6 +80,17 @@ public class PlayerRecorder extends ReplayRecorder {
         }
 
         super.onPacket(packet);
+
+        if (!playerSpawned && packet instanceof PlayerListS2CPacket playerList) {
+            if (playerList.getActions().contains(PlayerListS2CPacket.Action.ADD_PLAYER) && playerList.entries.stream().anyMatch(e -> e.profileId() == playerId))
+                spawnRecordingPlayer();
+        }
+
+        if (!isRespawning && packet instanceof PlayerRespawnS2CPacket) {
+            //Catches a dimension change that isn't technically a respawn, but should still be count as one.
+            spawnRecordingPlayer();
+        }
+
     }
 
     @Override
