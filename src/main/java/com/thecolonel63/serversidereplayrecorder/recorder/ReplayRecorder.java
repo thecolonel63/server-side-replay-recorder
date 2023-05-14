@@ -109,32 +109,36 @@ public abstract class ReplayRecorder {
         status.set(ReplayStatus.Recording);
     }
 
+    AtomicBoolean compressing = new AtomicBoolean(false);
+
     private void writeMetaData(boolean isFinishing) {
-        try {
-            String serverName = ServerSideReplayRecorderServer.config.getServer_name();
-            JsonObject object = new JsonObject();
-            object.addProperty("singleplayer", false);
-            object.addProperty("serverName", serverName);
-            object.addProperty("customServerName", serverName + " | " + this.getRecordingName());
-            object.addProperty("duration", last_timestamp);
-            object.addProperty("date", start);
-            object.addProperty("mcversion", MinecraftVersion.GAME_VERSION.getName());
-            object.addProperty("fileFormat", "MCPR");
-            object.addProperty("fileFormatVersion", 14); //Unlikely to change any time soon, last time this was updates was several major versions ago.
-            object.addProperty("protocol", SharedConstants.getProtocolVersion());
-            object.addProperty("generator", "mattymatty's enhanced thecolonel63's Server Side Replay Recorder");
-            object.addProperty("selfId", -1);
-            object.add("players", new JsonArray());
-            FileWriter fw = new FileWriter(tmp_folder + "/metaData.json", false);
-            fw.write(object.toString());
-            fw.close();
-            this.writeMarkers();
-            if (isFinishing)
-                compressReplay();
-        } catch (IOException ioException) {
-            ioException.printStackTrace();
-        }finally {
-            this.metadataQueued.set(false);
+        if(compressing.compareAndSet(false, isFinishing)) {
+            try {
+                String serverName = ServerSideReplayRecorderServer.config.getServer_name();
+                JsonObject object = new JsonObject();
+                object.addProperty("singleplayer", false);
+                object.addProperty("serverName", serverName);
+                object.addProperty("customServerName", serverName + " | " + this.getRecordingName());
+                object.addProperty("duration", last_timestamp);
+                object.addProperty("date", start);
+                object.addProperty("mcversion", MinecraftVersion.GAME_VERSION.getName());
+                object.addProperty("fileFormat", "MCPR");
+                object.addProperty("fileFormatVersion", 14); //Unlikely to change any time soon, last time this was updates was several major versions ago.
+                object.addProperty("protocol", SharedConstants.getProtocolVersion());
+                object.addProperty("generator", "mattymatty's enhanced thecolonel63's Server Side Replay Recorder");
+                object.addProperty("selfId", -1);
+                object.add("players", new JsonArray());
+                FileWriter fw = new FileWriter(tmp_folder + "/metaData.json", false);
+                fw.write(object.toString());
+                fw.close();
+                this.writeMarkers();
+                if (isFinishing)
+                    compressReplay();
+            } catch (IOException ioException) {
+                ioException.printStackTrace();
+            } finally {
+                this.metadataQueued.set(false);
+            }
         }
     }
 
