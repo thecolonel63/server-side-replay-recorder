@@ -9,6 +9,7 @@
     "main.LoginSuccessfulS2CPacketAccessor",
     "main.MinecraftServerMixin",
     "player.EntityTrackerAccessor",
+    "player.EntityTrackerMixin",
     "player.NetHandlerPlayServerFakeMixin",
     "player.PlayerManagerMixin",
     "player.ServerPlayNetworkHandlerMixin",

@@ -6,8 +6,6 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactoryBuilder;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 import com.thecolonel63.serversidereplayrecorder.config.MainConfig;
-import com.thecolonel63.serversidereplayrecorder.recorder.PlayerRecorder;
-import com.thecolonel63.serversidereplayrecorder.util.StoppedReplayFixer;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
@@ -18,8 +16,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -77,6 +73,8 @@ public class ServerSideReplayRecorderServer implements ModInitializer {
         }
     }
 
+    /*
+    // Code does not work anymore
     private static void fixStoppedReplays() {
 
         System.out.println("Scanning for and fixing incomplete replays...");
@@ -114,19 +112,13 @@ public class ServerSideReplayRecorderServer implements ModInitializer {
             }
         });
 
-    }
+    }*/
 
     public static void registerServer(MinecraftServer mcServer) {
         server = mcServer;
-        fixStoppedReplays();
+        //fixStoppedReplays();
     }
 
-    public static void tick() {
-        PlayerRecorder.playerRecorderMap.forEach((connection, playerThreadRecorder) -> {
-            //Initiate the saving process of what isn't automatically saved.
-            playerThreadRecorder.onPlayerTick();
-        });
-    }
 
     @Override
     public void onInitialize() {

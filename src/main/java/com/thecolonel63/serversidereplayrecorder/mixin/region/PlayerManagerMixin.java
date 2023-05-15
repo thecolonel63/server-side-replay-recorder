@@ -3,7 +3,6 @@ package com.thecolonel63.serversidereplayrecorder.mixin.region;
 import com.thecolonel63.serversidereplayrecorder.recorder.RegionRecorder;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.message.MessageType;
-import net.minecraft.network.message.SentMessage;
 import net.minecraft.network.message.SignedMessage;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.play.GameMessageS2CPacket;
@@ -33,12 +32,12 @@ public class PlayerManagerMixin {
 
     @Shadow @Final private MinecraftServer server;
 
-    @Inject(method = "Lnet/minecraft/server/PlayerManager;broadcast(Lnet/minecraft/text/Text;Ljava/util/function/Function;Z)V", at= @At("TAIL"))
+    @Inject(method = "broadcast(Lnet/minecraft/text/Text;Ljava/util/function/Function;Z)V", at= @At("TAIL"))
     void handleBroadcast(Text message, Function<ServerPlayerEntity, Text> playerMessageFactory, boolean overlay, CallbackInfo ci){
         RegionRecorder.regionRecorderMap.values().forEach(r -> r.onPacket(new GameMessageS2CPacket(message, overlay)));
     }
 
-    @Inject(method = "Lnet/minecraft/server/PlayerManager;broadcast(Lnet/minecraft/network/message/SignedMessage;Ljava/util/function/Predicate;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/network/message/MessageType$Parameters;)V", at= @At("TAIL"))
+    @Inject(method = "broadcast(Lnet/minecraft/network/message/SignedMessage;Ljava/util/function/Predicate;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/network/message/MessageType$Parameters;)V", at= @At("TAIL"))
     void handleBroadcast2(SignedMessage message, Predicate<ServerPlayerEntity> shouldSendFiltered, @Nullable ServerPlayerEntity sender, MessageType.Parameters params, CallbackInfo ci){
         //Frick the encryption just store all messages as not secure
         RegionRecorder.regionRecorderMap.values().forEach(r -> r.onPacket(new ProfilelessChatMessageS2CPacket(

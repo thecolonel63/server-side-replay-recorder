@@ -13,9 +13,8 @@ import net.minecraft.MinecraftVersion;
 import net.minecraft.SharedConstants;
 import net.minecraft.network.NetworkSide;
 import net.minecraft.network.NetworkState;
-import net.minecraft.network.listener.ClientPlayPacketListener;
-import net.minecraft.network.packet.Packet;
 import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.login.LoginCompressionS2CPacket;
 import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;
 import net.minecraft.network.packet.s2c.play.BundleS2CPacket;
@@ -24,7 +23,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import net.minecraft.util.Util;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -166,15 +164,15 @@ public abstract class ReplayRecorder {
         JsonObject value = new JsonObject();
         JsonObject position = new JsonObject();
 
-        entry.add("realTimestamp", new JsonPrimitive(this.last_timestamp));
-        value.add("name", name == null ? null : new JsonPrimitive(name));
+        entry.add("realTimestamp", new JsonPrimitive(this.last_timestamp.get()));
+        if(name!=null)
+            value.add("name", new JsonPrimitive(name));
         position.add("x", new JsonPrimitive(x));
         position.add("y", new JsonPrimitive(y));
         position.add("z", new JsonPrimitive(z));
         position.add("yaw", new JsonPrimitive(yaw));
         position.add("pitch", new JsonPrimitive(pitch));
         position.add("roll", new JsonPrimitive(roll));
-
         value.add("position", position);
         entry.add("value", value);
         markers.add(entry);

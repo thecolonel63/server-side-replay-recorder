@@ -25,11 +25,6 @@ public class MinecraftServerMixin {
         }
     }
 
-    @Inject(method = "tick", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/MinecraftServer;tickWorlds(Ljava/util/function/BooleanSupplier;)V"))
-    private void onStartTick(BooleanSupplier shouldKeepTicking, CallbackInfo ci) {
-        ServerSideReplayRecorderServer.tick();
-    }
-
     @Inject(method = "tick", at = @At("RETURN"))
     void onTickEnd(BooleanSupplier shouldKeepTicking, CallbackInfo ci){
         ReplayRecorder.active_recorders.forEach(ReplayRecorder::onServerTick);

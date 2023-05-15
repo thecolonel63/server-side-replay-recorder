@@ -63,17 +63,6 @@ public class ServerWorldMixin implements RegionRecorderWorld {
         );
     }
 
-    //this part of the code seems to have disappeared
-    /*
-    @Inject(method = "sendVibrationPacket", at = @At(value = "TAIL"))
-    private void handleVibration(Vibration vibration, CallbackInfo ci) {
-        BlockPos pos = vibration.getOrigin();
-        getRegionRecorders().stream().filter(r -> r.region.isInBox(new Vec3d(pos.getX(),pos.getY(),pos.getZ()))).forEach(
-                r -> r.onPacket(new VibrationS2CPacket(vibration))
-        );
-    }
-    */
-
     @Inject(method = "spawnParticles(Lnet/minecraft/particle/ParticleEffect;DDDIDDDD)I", at = @At(value = "TAIL"))
     private <T extends ParticleEffect> void handleParticles(T particle, double x, double y, double z, int count, double deltaX, double deltaY, double deltaZ, double speed, CallbackInfoReturnable<Integer> cir) {
         getRegionRecorders().stream().filter(r -> r.region.isInBox(new Vec3d(x,y,z))).forEach(

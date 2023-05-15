@@ -1,8 +1,8 @@
 package com.thecolonel63.serversidereplayrecorder.util;
 
-import net.minecraft.network.packet.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.listener.PacketListener;
+import net.minecraft.network.packet.Packet;
 
 @SuppressWarnings({"rawtypes", "unchecked"})
 public record WrappedPacket(Packet wrappedPacket) implements Packet {

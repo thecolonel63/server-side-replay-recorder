@@ -404,6 +404,7 @@ public class ReplayCommand {
                                                                             PlayerRecorder recorder = PlayerRecorder.playerRecorderMap.get(player.networkHandler.connection);
                                                                             if (recorder != null) {
                                                                                 recorder.addMarker(null);
+                                                                                context.getSource().sendFeedback(Text.literal("Added a marker on Player %s Recording".formatted(player.getGameProfile().getName())),true);
                                                                                 return 0;
                                                                             } else {
                                                                                 context.getSource().sendError(Text.literal("Unknown Player %s or Player not Recording".formatted(player.getGameProfile().getName())).formatted(Formatting.RED));
@@ -428,6 +429,7 @@ public class ReplayCommand {
                                                                             RegionRecorder recorder = RegionRecorder.regionRecorderMap.get(regionName);
                                                                             if (recorder != null) {
                                                                                 recorder.addMarker(null);
+                                                                                context.getSource().sendFeedback(Text.literal("Added a marker on Region %s Recording".formatted(regionName)),true);
                                                                                 return 0;
                                                                             } else {
                                                                                 context.getSource().sendError(Text.literal("Unknown Region %s".formatted(regionName)).formatted(Formatting.RED));
