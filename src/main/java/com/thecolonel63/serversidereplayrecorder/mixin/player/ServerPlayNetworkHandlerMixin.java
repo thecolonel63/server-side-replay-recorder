@@ -1,5 +1,6 @@
-package com.thecolonel63.serversidereplayrecorder.mixin;
+package com.thecolonel63.serversidereplayrecorder.mixin.player;
 
+import com.thecolonel63.serversidereplayrecorder.recorder.PlayerRecorder;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import net.minecraft.network.ClientConnection;
@@ -13,7 +14,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import static com.thecolonel63.serversidereplayrecorder.server.ServerSideReplayRecorderServer.connectionPlayerThreadRecorderMap;
+import java.util.Optional;
+
+import static com.thecolonel63.serversidereplayrecorder.recorder.PlayerRecorder.playerRecorderMap;
 
 @Mixin(ServerPlayNetworkHandler.class)
 public abstract class ServerPlayNetworkHandlerMixin {
@@ -22,25 +25,15 @@ public abstract class ServerPlayNetworkHandlerMixin {
 
     @Inject(method = "sendPacket(Lnet/minecraft/network/Packet;Lio/netty/util/concurrent/GenericFutureListener;)V", at = @At("TAIL"))
     private void savePacket(Packet<?> packet, @Nullable GenericFutureListener<? extends Future<? super Void>> listener, CallbackInfo ci) {
-        synchronized (connectionPlayerThreadRecorderMap) {
-            //Get the recorder instance dedicated to this connection and give it the packet to record.
-            //If there is no recorder instance for this connection, don't do anything.
-            if (!connectionPlayerThreadRecorderMap.containsKey(this.getConnection())) {
-                return;
-            }
-            connectionPlayerThreadRecorderMap.get(this.getConnection()).onPacket(packet);
-        }
+        //Get the recorder instance dedicated to this connection and give it the packet to record.
+        //If there is no recorder instance for this connection, don't do anything.
+        Optional.ofNullable(playerRecorderMap.get(this.getConnection())).ifPresent(r->r.onPacket(packet));
     }
 
     @Inject(method = "onDisconnected", at = @At("HEAD"))
     private void handleDisconnectionOfRecorder(Text reason, CallbackInfo ci) {
-        synchronized (connectionPlayerThreadRecorderMap) {
-            //Tell the recorder to handle a disconnect, if there *is* a recorder.
-            if (!connectionPlayerThreadRecorderMap.containsKey(this.getConnection())) {
-                return;
-            }
-            connectionPlayerThreadRecorderMap.get(this.getConnection()).handleDisconnect();
-        }
+        //Tell the recorder to handle a disconnect, if there *is* a recorder
+        Optional.ofNullable(playerRecorderMap.get(this.getConnection())).ifPresent(PlayerRecorder::handleDisconnect);
     }
 
 }

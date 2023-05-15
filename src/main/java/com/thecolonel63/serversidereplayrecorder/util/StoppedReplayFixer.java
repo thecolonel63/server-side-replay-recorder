@@ -1,6 +1,6 @@
 package com.thecolonel63.serversidereplayrecorder.util;
 
-import com.thecolonel63.serversidereplayrecorder.server.ServerSideReplayRecorderServer;
+import com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer;
 import net.minecraft.MinecraftVersion;
 import net.minecraft.SharedConstants;
 
@@ -11,18 +11,19 @@ import java.nio.file.LinkOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.UUID;
 
 public class StoppedReplayFixer {
 
     static int lastTimestamp = 0;
 
-    static String metaData = "{\"singleplayer\":false,\"serverName\":\""+ServerSideReplayRecorderServer.config.getServer_name()+"\",\"customServerName\":\""+ServerSideReplayRecorderServer.config.getServer_name()+"\",\"duration\":%DURATION%,\"date\":%DATE%,\"mcversion\":\""+MinecraftVersion.GAME_VERSION.getName()+"\",\"fileFormat\":\"MCPR\",\"fileFormatVersion\":14,\"protocol\":"+ SharedConstants.getProtocolVersion()+",\"generator\":\"thecolonel63's Server Side Replay Recorder\",\"selfId\":-1,\"players\":[]}";
+    static final String metaData = "{\"singleplayer\":false,\"serverName\":\""+ServerSideReplayRecorderServer.config.getServer_name()+"\",\"customServerName\":\""+ServerSideReplayRecorderServer.config.getServer_name()+"\",\"duration\":%DURATION%,\"date\":%DATE%,\"mcversion\":\""+MinecraftVersion.GAME_VERSION.getName()+"\",\"fileFormat\":\"MCPR\",\"fileFormatVersion\":14,\"protocol\":"+ SharedConstants.getProtocolVersion()+",\"generator\":\"thecolonel63's Server Side Replay Recorder\",\"selfId\":-1,\"players\":[]}";
     static String loginName = "NONAME";
     static UUID loginUuid = new UUID(0, 0);
     static boolean loggedIn = false;
 
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public static void fixReplay(File stoppedFolder, boolean skipWritingMetadata) throws IOException {
         File file = new File(stoppedFolder+"/recording.tmcpr");
 
@@ -51,9 +52,13 @@ public class StoppedReplayFixer {
         File movedReplayFile = new File(stoppedFolder.getParentFile()+"/"+(ServerSideReplayRecorderServer.config.use_username_for_recordings() ? loginName : loginUuid)+"/"+getReplayName(zone));
         movedReplayFile.getParentFile().mkdirs();
 
-        FileHandlingUtility.zip(new ArrayList<>(){{add(new File(stoppedFolder+"/metaData.json")); add(new File(stoppedFolder+"/recording.tmcpr"));}}, movedReplayFile.toString(), false, null);
-        new File(stoppedFolder+"/metaData.json").delete();
-        new File(stoppedFolder+"/recording.tmcpr").delete();
+
+        File[] filesToCompress = stoppedFolder.listFiles(File::isFile);
+        assert filesToCompress != null;
+        FileHandlingUtility.zip(Arrays.asList(filesToCompress), movedReplayFile.toString(), false, null);
+        for (File f : filesToCompress){
+            f.delete();
+        }
         stoppedFolder.delete();
     }
 
