@@ -8,22 +8,24 @@
   "client": [
   ],
   "server": [
-    "commands.CommandManagerMixin",
     "LightUpdatePacketMixin",
+    "commands.CommandManagerMixin",
+    "main.LoginSuccessfulS2CPacketAccessor",
+    "main.MinecraftServerMixin",
+    "player.EntityTrackerMixin",
+    "player.NetHandlerPlayServerFakeMixin",
+    "player.PlayerManagerMixin",
+    "player.ServerPlayNetworkHandlerMixin",
+    "player.ServerWorldMixin",
     "region.ChunkHolderMixin",
+    "region.EntityPlayerMPFakeMixin",
     "region.EntityTrackerMixin",
     "region.MinecraftServerMixin",
     "region.PlayerManagerMixin",
     "region.ServerPlayerInteractionManagerMixin",
     "region.ServerPlayNetworkHandlerMixin",
     "region.ServerWorldMixin",
-    "region.ThreadAnvilChunkStorageMixin",
-    "main.LoginSuccessfulS2CPacketAccessor",
-    "main.MinecraftServerMixin",
-    "player.NetHandlerPlayServerFakeMixin",
-    "player.PlayerManagerMixin",
-    "player.ServerPlayNetworkHandlerMixin",
-    "player.ServerWorldMixin"
+    "region.ThreadAnvilChunkStorageMixin"
   ],
   "injectors": {
     "defaultRequire": 1

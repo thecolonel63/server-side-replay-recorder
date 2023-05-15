@@ -16,7 +16,6 @@ import net.minecraft.network.Packet;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;
 import net.minecraft.network.packet.s2c.play.*;
-import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.collection.DefaultedList;
 import net.minecraft.util.math.BlockPos;

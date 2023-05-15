@@ -128,7 +128,7 @@ public abstract class ReplayRecorder {
                 object.addProperty("generator", "mattymatty's enhanced thecolonel63's Server Side Replay Recorder");
                 object.addProperty("selfId", -1);
                 object.add("players", new JsonArray());
-                FileWriter fw = new FileWriter(tmp_folder + "/metaData.json", false);
+                FileWriter fw = new FileWriter(Paths.get(tmp_folder.getAbsolutePath(), "metaData.json").toFile(), false);
                 fw.write(object.toString());
                 fw.close();
                 this.writeMarkers();
@@ -146,7 +146,7 @@ public abstract class ReplayRecorder {
     private void writeMarkers() {
         try {
             if (markers.size()>0) {
-                FileWriter fw = new FileWriter(tmp_folder + "/markers.json", false);
+                FileWriter fw = new FileWriter(Paths.get(tmp_folder.getAbsolutePath(), "markers.json").toFile(), false);
                 fw.write(markers.toString());
                 fw.close();
             }
@@ -164,8 +164,9 @@ public abstract class ReplayRecorder {
         JsonObject value = new JsonObject();
         JsonObject position = new JsonObject();
 
-        entry.add("realTimestamp", new JsonPrimitive(this.last_timestamp));
-        value.add("name", name == null ? null : new JsonPrimitive(name));
+        entry.add("realTimestamp", new JsonPrimitive(this.last_timestamp.get()));
+        if(name!=null)
+            value.add("name", new JsonPrimitive(name));
         position.add("x", new JsonPrimitive(x));
         position.add("y", new JsonPrimitive(y));
         position.add("z", new JsonPrimitive(z));
@@ -195,6 +196,7 @@ public abstract class ReplayRecorder {
                     serverPlayerEntity.sendSystemMessage(new LiteralText("Replay %s Saved".formatted(this.out_file)).formatted(Formatting.YELLOW), Util.NIL_UUID);
                 }
             }
+            ServerSideReplayRecorderServer.LOGGER.info("Replay %s Saved".formatted(this.out_file));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -231,6 +233,7 @@ public abstract class ReplayRecorder {
             this.onServerTick();
             if (this.open.compareAndSet(true,false)) {
                 this.status.set(ReplayStatus.Saving);
+                ServerSideReplayRecorderServer.LOGGER.info("Stopping recording %s:%s".formatted(this.getClass().getSimpleName(), this.getRecordingName()));
                 active_recorders.remove(this);
                 Runnable endTask = () -> {
                     try {
