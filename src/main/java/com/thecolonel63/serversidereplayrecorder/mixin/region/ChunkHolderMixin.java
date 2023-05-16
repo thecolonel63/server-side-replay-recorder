@@ -22,7 +22,7 @@ public class ChunkHolderMixin {
 
     @Shadow @Final ChunkPos pos;
 
-    @Inject(method = "sendPacketToPlayersWatching", at=@At("TAIL"))
+    @Inject(method = "sendPacketToPlayersWatching", at=@At("HEAD"))
     void handleChunkUpdate(Packet<?> packet, boolean onlyOnWatchDistanceEdge, CallbackInfo ci){
         Set<RegionRecorder> recorders = ((RegionRecorderWorld)this.world).getRegionRecordersByChunk().get(this.pos);
         if (recorders != null)
