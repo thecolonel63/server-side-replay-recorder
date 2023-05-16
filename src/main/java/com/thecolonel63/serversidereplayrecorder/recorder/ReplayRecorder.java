@@ -68,7 +68,7 @@ public abstract class ReplayRecorder {
         return open.get();
     }
 
-    private static final ThreadFactory fileWriterFactory = new ThreadFactoryBuilder().setNameFormat("Replay-Writer-%d").setDaemon(true).build();
+    private static final ThreadFactory fileWriterFactory = new ThreadFactoryBuilder().setNameFormat("Replay-Writer-%d").setDaemon(false).build();
     protected final ThreadPoolExecutor fileWriterExecutor = new ThreadPoolExecutor(1, 1,
             30L, TimeUnit.SECONDS,
             new LinkedBlockingQueue<>(), fileWriterFactory, new ThreadPoolExecutor.DiscardPolicy());

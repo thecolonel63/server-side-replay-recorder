@@ -8,7 +8,7 @@
   "client": [
   ],
   "server": [
-    "LightUpdatePacketMixin",
+    "main.LightUpdatePacketMixin",
     "commands.CommandManagerMixin",
     "main.LoginSuccessfulS2CPacketAccessor",
     "main.MinecraftServerMixin",
