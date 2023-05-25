@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import static com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer.placeholders;
 
 public abstract class ReplayRecorder {
 
@@ -107,12 +108,12 @@ public abstract class ReplayRecorder {
             debugFile = null;
         ReplayRecorder.writing_recorders.add(this);
         status.set(ReplayStatus.Recording);
+        ServerSideReplayRecorderServer.LOGGER.info("Started recording %s:%s".formatted(this.getClass().getSimpleName(), this.getRecordingName()));
     }
 
     AtomicBoolean compressing = new AtomicBoolean(false);
-
     private void writeMetaData(boolean isFinishing) {
-        if(compressing.compareAndSet(false, isFinishing)) {
+        if (compressing.compareAndSet(false, isFinishing)) {
             try {
                 String serverName = ServerSideReplayRecorderServer.config.getServer_name();
                 JsonObject object = new JsonObject();
@@ -125,7 +126,7 @@ public abstract class ReplayRecorder {
                 object.addProperty("fileFormat", "MCPR");
                 object.addProperty("fileFormatVersion", 14); //Unlikely to change any time soon, last time this was updates was several major versions ago.
                 object.addProperty("protocol", SharedConstants.getProtocolVersion());
-                object.addProperty("generator", "mattymatty's enhanced thecolonel63's Server Side Replay Recorder");
+                object.addProperty("generator", "thecolonel63's Server Side Replay Recorder " + placeholders.getString("version") + "-" + placeholders.getString("build"));
                 object.addProperty("selfId", -1);
                 object.add("players", new JsonArray());
                 FileWriter fw = new FileWriter(Paths.get(tmp_folder.getAbsolutePath(), "metaData.json").toFile(), false);
