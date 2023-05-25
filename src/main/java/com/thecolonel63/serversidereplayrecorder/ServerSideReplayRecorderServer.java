@@ -16,6 +16,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.util.ResourceBundle;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -27,11 +28,14 @@ public class ServerSideReplayRecorderServer implements ModInitializer {
         builder.disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER);
         builder.enable(YAMLGenerator.Feature.INDENT_ARRAYS_WITH_INDICATOR);
         yaml = new ObjectMapper(builder.build()).configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        placeholders = ResourceBundle.getBundle("placeholders.properties");
     }
 
     public static final ExecutorService recorderExecutor = Executors.newSingleThreadExecutor(new DefaultThreadFactory("Replay",true));
 
     private static final ObjectMapper yaml;
+
+    public static final ResourceBundle placeholders;
 
     public static final Logger LOGGER = LoggerFactory.getLogger(ServerSideReplayRecorderServer.class.getName());
 

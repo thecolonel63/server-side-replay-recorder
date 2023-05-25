@@ -56,7 +56,7 @@ public class ServerWorldMixin implements RegionRecorderWorld {
                 r -> r.onPacket(new BlockBreakingProgressS2CPacket(entityId, pos, progress))
         );
     }
-    @Inject(method = "createExplosion", at = @At(value = "HEAD"), locals = LocalCapture.CAPTURE_FAILHARD)
+    @Inject(method = "createExplosion", at = @At(value = "RETURN"), locals = LocalCapture.CAPTURE_FAILHARD)
     private void handleExplosion(Entity entity, DamageSource damageSource, ExplosionBehavior behavior, double x, double y, double z, float power, boolean createFire, World.ExplosionSourceType explosionSourceType, CallbackInfoReturnable<Explosion> cir, Explosion explosion) {
         getRegionRecorders().stream().filter(r -> r.region.isInBox(new Vec3d(x,y,z))).forEach(
                 r -> r.onPacket(new ExplosionS2CPacket(x, y, z, power, explosion.getAffectedBlocks(), Vec3d.ZERO))

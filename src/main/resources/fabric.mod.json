@@ -3,8 +3,15 @@
   "id": "serversidereplayrecorder",
   "version": "${version}",
   "name": "Server Side Replay Recorder",
-  "description": "Records all client connections at once to the format that ReplayMod uses. Shouldn't require too many fixes between versions.",
+  "description": "Records players and/or specific areas in the popular ReplayMod format",
   "authors": ["thecolonel63"],
+  "contributors": [{
+    "name": "The__Matty",
+    "contact": {
+      "discord": "mattymatty#9621",
+      "homepage": "https://github.com/mattymatty97"
+    }
+  }],
   "contact": {
     "homepage": "https://github.com/thecolonel63/server-side-replay-recorder",
     "issues": "https://github.com/thecolonel63/server-side-replay-recorder/issues",
@@ -23,7 +30,7 @@
   ],
   "depends": {
     "fabricloader": "*",
-    "minecraft": "1.19.4"
+    "minecraft": "${mc_version}"
   },
   "breaks": {
     "carpettisaddition": "1.42.1-"

@@ -6,6 +6,7 @@ plugins {
 
 version = project.mod_version
 group = project.maven_group
+def buildnumber = 1
 
 repositories {
     maven { url "https://maven.terraformersmc.com/" }
@@ -33,12 +34,21 @@ dependencies {
     provided "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:latest.release"
 }
 
+def placeholders = [
+        'version': project.version,
+        'mc_version': project.minecraft_version,
+        'build': buildnumber
+]
+
 processResources {
-    inputs.property "version", project.version
+    inputs.properties placeholders
     filteringCharset "UTF-8"
 
     filesMatching("fabric.mod.json") {
-        expand "version": project.version
+        expand placeholders
+    }
+    filesMatching("placeholders.properties") {
+        expand placeholders
     }
 }
 
@@ -90,9 +100,8 @@ publishing {
         // retrieving dependencies.
     }
 }
-def buildnumber = 1
 
-tasks.register("updateBuildNumber") {
+tasks.register("updateBuildNumber"){
     doLast {
         Properties props = new Properties()
 
@@ -100,17 +109,16 @@ tasks.register("updateBuildNumber") {
 
         try {
             props.load(propsFile.newDataInputStream())
+
+            String prevVersion = (props.getProperty('mod_version'))
+
+            if (prevVersion.equals(project.mod_version)) {
+
+                buildnumber = (((props.getProperty('mod_buildnumber')) as Integer) + 1)
+                placeholders.build = buildnumber
+
+            }
         }catch (IOException ignored){
-            props.setProperty('mod_buildnumber', "1")
-            props.setProperty('mod_version', project.mod_version.toString())
-        }
-
-        String prevVersion = (props.getProperty('mod_version'))
-
-        if (prevVersion.equals(project.mod_version)) {
-
-            buildnumber = (((props.getProperty('mod_buildnumber')) as Integer) + 1)
-
         }
 
         props.setProperty('mod_buildnumber', buildnumber.toString())
