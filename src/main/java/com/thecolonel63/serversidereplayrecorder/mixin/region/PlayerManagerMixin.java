@@ -22,12 +22,12 @@ import java.util.UUID;
 @Mixin(PlayerManager.class)
 public class PlayerManagerMixin {
 
-    @Inject(method = "broadcastChatMessage", at= @At("TAIL"))
+    @Inject(method = "broadcastChatMessage", at= @At("HEAD"))
     void handleBroadcast(Text message, MessageType type, UUID sender, CallbackInfo ci){
         RegionRecorder.regionRecorderMap.values().forEach(r -> r.onPacket(new GameMessageS2CPacket(message, type, sender)));
     }
 
-    @Inject(method = "sendToOtherTeams", at= @At("TAIL"))
+    @Inject(method = "sendToOtherTeams", at= @At("HEAD"))
     void handleOtherTeamMessage(PlayerEntity source, Text message, CallbackInfo ci){
         AbstractTeam abstractTeam = source.getScoreboardTeam();
         if (abstractTeam != null) {
@@ -35,17 +35,17 @@ public class PlayerManagerMixin {
         }
     }
 
-    @Inject(method = "sendToDimension", at= @At("TAIL"))
+    @Inject(method = "sendToDimension", at= @At("HEAD"))
     void handleDimensionPacket(Packet<?> packet, RegistryKey<World> dimension, CallbackInfo ci){
         RegionRecorder.regionRecorderMap.values().stream().filter(r -> r.world.getRegistryKey().equals(dimension)).forEach(r -> r.onPacket(packet));
     }
 
-    @Inject(method = "sendToAll", at= @At("TAIL"))
+    @Inject(method = "sendToAll", at= @At("HEAD"))
     void handleAllPacket(Packet<?> packet, CallbackInfo ci){
         RegionRecorder.regionRecorderMap.values().forEach(r -> r.onPacket(packet));
     }
 
-    @Inject(method = "sendToAround", at = @At("TAIL"))
+    @Inject(method = "sendToAround", at = @At("HEAD"))
     private void handleLevelEvent(@Nullable PlayerEntity player, double x, double y, double z, double distance, RegistryKey<World> worldKey, Packet<?> packet, CallbackInfo ci) {
         RegionRecorder.regionRecorderMap.values().stream().filter(r -> r.world.getRegistryKey().equals(worldKey)).filter(r -> r.region.isInBox(new Vec3d(x,y,z))).forEach(
                 r -> r.onPacket(packet)

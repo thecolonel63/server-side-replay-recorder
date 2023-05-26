@@ -25,6 +25,11 @@ public class MinecraftServerMixin {
         }
     }
 
+    @Inject(method = "shutdown", at = @At(value = "RETURN"))
+    private void onStopServerTail(CallbackInfo ci) {
+        ServerSideReplayRecorderServer.LOGGER.warn("Waiting for all recorders to finish saving");
+    }
+
     @Inject(method = "tick", at = @At("RETURN"))
     void onTickEnd(BooleanSupplier shouldKeepTicking, CallbackInfo ci){
         ReplayRecorder.active_recorders.forEach(ReplayRecorder::onServerTick);

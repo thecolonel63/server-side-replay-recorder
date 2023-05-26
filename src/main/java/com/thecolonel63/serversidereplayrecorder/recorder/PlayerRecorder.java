@@ -12,11 +12,7 @@ import net.minecraft.network.Packet;
 import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;
 import net.minecraft.network.packet.s2c.play.BlockBreakingProgressS2CPacket;
 import net.minecraft.network.packet.s2c.play.LightUpdateS2CPacket;
-import net.minecraft.network.packet.s2c.play.PlaySoundS2CPacket;
-import net.minecraft.network.packet.s2c.play.WorldEventS2CPacket;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvent;
 import net.minecraft.util.math.BlockPos;
 
 import java.io.File;
@@ -75,28 +71,32 @@ public class PlayerRecorder extends ReplayRecorder {
 
     @Override
     public void handleDisconnect() {
-        //Player has disconnected, so remove our recorder from the map and close the output streams.
+        //Player has disconnected, so remove our recorder from the map
         playerRecorderMap.remove(this.connection);
         super.handleDisconnect();
     }
 
-    public void onClientSound(SoundEvent sound, SoundCategory category, double x, double y, double z, float volume, float pitch) {
+
+    //moved to PlayerManagerMixin#sendToAround
+    /*public void onClientSound(RegistryEntry<SoundEvent> sound, SoundCategory category, double x, double y, double z, float volume, float pitch, long seed) {
         try {
             // Send to all other players in ServerWorldEventHandler#playSoundToAllNearExcept
-            onPacket(new PlaySoundS2CPacket(sound, category, x, y, z, volume, pitch));
+            onPacket(new PlaySoundS2CPacket(sound, category, x, y, z, volume, pitch, seed));
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
+    }*/
 
-    public void onClientEffect(int type, BlockPos pos, int data) {
+
+    //moved to PlayerManagerMixin#sendToAround
+    /*public void onClientEffect(int type, BlockPos pos, int data) {
         try {
             // Send to all other players in ServerWorldEventHandler#playEvent
             onPacket(new WorldEventS2CPacket(type, pos, data, false));
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
+    }*/
 
     public void onBlockBreakAnim(int breakerId, BlockPos pos, int progress) {
         if (playerId == null) return;

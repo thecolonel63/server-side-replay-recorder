@@ -14,6 +14,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.ChunkPos;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.Vibration;
+import net.minecraft.world.World;
 import net.minecraft.world.explosion.Explosion;
 import net.minecraft.world.explosion.ExplosionBehavior;
 import org.spongepowered.asm.mixin.Mixin;
@@ -51,20 +52,20 @@ public class ServerWorldMixin implements RegionRecorderWorld {
         return this.recorders_by_expanded_chunk;
     }
 
-    @Inject(method = "setBlockBreakingInfo", at = @At("TAIL"))
+    @Inject(method = "setBlockBreakingInfo", at = @At("HEAD"))
     void handleBreaking(int entityId, BlockPos pos, int progress, CallbackInfo ci){
         getRegionRecorders().stream().filter(r -> r.region.isInBox(new Vec3d(pos.getX(),pos.getY(),pos.getZ()))).forEach(
                 r -> r.onPacket(new BlockBreakingProgressS2CPacket(entityId, pos, progress))
         );
     }
-    @Inject(method = "createExplosion", at = @At(value = "TAIL"), locals = LocalCapture.CAPTURE_FAILHARD)
+    @Inject(method = "createExplosion", at = @At(value = "RETURN"), locals = LocalCapture.CAPTURE_FAILHARD)
     private void handleExplosion(Entity entity, DamageSource damageSource, ExplosionBehavior behavior, double x, double y, double z, float power, boolean createFire, Explosion.DestructionType destructionType, CallbackInfoReturnable<Explosion> cir, Explosion explosion) {
         getRegionRecorders().stream().filter(r -> r.region.isInBox(new Vec3d(x,y,z))).forEach(
                 r -> r.onPacket(new ExplosionS2CPacket(x, y, z, power, explosion.getAffectedBlocks(), Vec3d.ZERO))
         );
     }
 
-    @Inject(method = "sendVibrationPacket", at = @At(value = "TAIL"))
+    @Inject(method = "sendVibrationPacket", at = @At(value = "HEAD"))
     private void handleVibration(Vibration vibration, CallbackInfo ci) {
         BlockPos pos = vibration.getOrigin();
         getRegionRecorders().stream().filter(r -> r.region.isInBox(new Vec3d(pos.getX(),pos.getY(),pos.getZ()))).forEach(
@@ -72,7 +73,7 @@ public class ServerWorldMixin implements RegionRecorderWorld {
         );
     }
 
-    @Inject(method = "spawnParticles(Lnet/minecraft/particle/ParticleEffect;DDDIDDDD)I", at = @At(value = "TAIL"))
+    @Inject(method = "spawnParticles(Lnet/minecraft/particle/ParticleEffect;DDDIDDDD)I", at = @At(value = "HEAD"))
     private <T extends ParticleEffect> void handleParticles(T particle, double x, double y, double z, int count, double deltaX, double deltaY, double deltaZ, double speed, CallbackInfoReturnable<Integer> cir) {
         getRegionRecorders().stream().filter(r -> r.region.isInBox(new Vec3d(x,y,z))).forEach(
                 r -> r.onPacket(new ParticleS2CPacket(particle, false, x, y, z, (float)deltaX, (float)deltaY, (float)deltaZ, (float)speed, count))
