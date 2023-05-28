@@ -28,7 +28,7 @@ public class ServerSideReplayRecorderServer implements ModInitializer {
         builder.disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER);
         builder.enable(YAMLGenerator.Feature.INDENT_ARRAYS_WITH_INDICATOR);
         yaml = new ObjectMapper(builder.build()).configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        placeholders = ResourceBundle.getBundle("placeholders.properties");
+        placeholders = ResourceBundle.getBundle("placeholders");
     }
 
     public static final ExecutorService recorderExecutor = Executors.newSingleThreadExecutor(new DefaultThreadFactory("Replay",true));
