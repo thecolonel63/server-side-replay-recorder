@@ -64,12 +64,9 @@ public class ServerSideReplayRecorderServer implements ModInitializer {
             //noinspection ResultOfMethodCallIgnored
             new File(FabricLoader.getInstance().getConfigDir().toString()).mkdirs();
             BufferedWriter writer = new BufferedWriter(new FileWriter(configPath));
-            writer.write("#Config for Server Side Replay Recorder");
-            writer.write("\n#replay_folder_name - Folder replays are all saved to.");
-            writer.write("\n#use_username_for_recordings - If false, UUIDs will be used to group replays instead.");
-            writer.write("\n#server_name - The name that appears as the server name in the replay viewer.");
-            writer.write("\n#recordable_users - list of usernames that are gonna be recorded.");
-            writer.write("\n\n");
+            writer.write("#Config for Server Side Replay Recorder\n");
+            writer.write("##WARNING any comments in this file might get deleted\n");
+            writer.write("\n");
             yaml.writeValue(writer, config);
             writer.close();
         } catch (IOException ioException) {

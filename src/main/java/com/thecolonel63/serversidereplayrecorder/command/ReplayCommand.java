@@ -151,7 +151,7 @@ public class ReplayCommand {
 
     public void register(CommandDispatcher<ServerCommandSource> dispatcher) {
         dispatcher.register(CommandManager.literal("replay")
-                .requires(s -> s.hasPermissionLevel(ServerSideReplayRecorderServer.config.command_op_level))
+                .requires(s -> s.hasPermissionLevel(ServerSideReplayRecorderServer.config.getCommand_op_level()))
                 .then(
                         CommandManager.literal("players")
                                 .then(CommandManager.literal("add")
