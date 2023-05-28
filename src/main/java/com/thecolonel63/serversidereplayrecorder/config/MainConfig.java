@@ -26,7 +26,7 @@ public class MainConfig {
 
     public MainConfig() {
         try {
-            file_storage_url = new URL("https://tmpfiles.org/api/v1/upload");
+            file_storage_url = new URL("https://file.io/");
         } catch (Throwable ignored) {
         }
     }

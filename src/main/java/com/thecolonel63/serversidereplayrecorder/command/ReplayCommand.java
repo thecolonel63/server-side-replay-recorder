@@ -129,8 +129,8 @@ public class ReplayCommand {
                                                             if (file.exists() && file.isFile()) {
                                                                 Thread thread = new Thread(()-> {
                                                                     try {
-                                                                        String result = FileHandlingUtility.uploadToTemp(file);
-                                                                        source.sendFeedback(Text.literal(result).formatted(Formatting.YELLOW), true);
+                                                                        Text result = FileHandlingUtility.uploadToTemp(file);
+                                                                        source.sendFeedback(result, true);
                                                                     } catch (Throwable t) {
                                                                         source.sendError(Text.literal("An Error occurred while uploading File %s".formatted(file.toString())).formatted(Formatting.RED));
                                                                         t.printStackTrace();

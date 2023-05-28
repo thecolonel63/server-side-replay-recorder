@@ -24,7 +24,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.function.Predicate;
 
 @Mixin(PlayerManager.class)
 public abstract class PlayerManagerMixin {
