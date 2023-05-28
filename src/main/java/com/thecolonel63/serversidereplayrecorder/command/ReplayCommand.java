@@ -136,7 +136,7 @@ public class ReplayCommand {
                                                                         t.printStackTrace();
                                                                     }
                                                                 });
-                                                                source.sendFeedback(Text.literal("uploading...").formatted(Formatting.YELLOW), false);
+                                                                source.sendFeedback(Text.literal("Uploading...").formatted(Formatting.YELLOW), false);
                                                                 thread.start();
                                                                 return 0;
                                                             } else {
@@ -175,12 +175,12 @@ public class ReplayCommand {
                                                     AtomicInteger count = new AtomicInteger();
                                                     to_add.forEach(n -> {
                                                         if (ServerSideReplayRecorderServer.config.getRecordable_users().add(n)) {
-                                                            source.sendFeedback(Text.literal("%s added from replay list".formatted(n)).formatted(Formatting.YELLOW), true);
+                                                            source.sendFeedback(Text.literal("%s added to replay list".formatted(n)).formatted(Formatting.YELLOW), true);
                                                             count.getAndIncrement();
                                                         }
                                                     });
                                                     if (count.get() > 0) {
-                                                        source.sendFeedback(Text.literal("Added Players will start recording next time they join the server").formatted(Formatting.YELLOW), true);
+                                                        source.sendFeedback(Text.literal("Added players will start recording next time they join the server").formatted(Formatting.YELLOW), true);
                                                         ServerSideReplayRecorderServer.saveConfig();
                                                     }
                                                     return 0;
@@ -206,7 +206,7 @@ public class ReplayCommand {
                                                     AtomicInteger count = new AtomicInteger();
                                                     to_remove.forEach(n -> {
                                                         if (ServerSideReplayRecorderServer.config.getRecordable_users().remove(n)) {
-                                                            source.sendFeedback(Text.literal("%s removed to replay list".formatted(n)).formatted(Formatting.YELLOW), true);
+                                                            source.sendFeedback(Text.literal("%s removed from replay list".formatted(n)).formatted(Formatting.YELLOW), true);
                                                             count.getAndIncrement();
                                                         }
                                                     });
