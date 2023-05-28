@@ -16,6 +16,7 @@ public class MainConfig {
     private boolean use_username_for_recordings = true;
     private String server_name = "My Server";
     private Set<String> recordable_users = new HashSet<>();
+    private boolean invert_user_list = false;
     private boolean recording_enabled = false;
     private boolean use_server_timestamps = true;
     private boolean assume_unloaded_chunks_dont_change = true;
@@ -120,5 +121,14 @@ public class MainConfig {
 
     public void setRecordable_users(Set<String> recordable_users) {
         this.recordable_users = recordable_users;
+    }
+
+    @JsonProperty(value = "invert_user_list")
+    public boolean invert_user_list() {
+        return invert_user_list;
+    }
+
+    public void setInvert_user_list(boolean invert_user_list) {
+        this.invert_user_list = invert_user_list;
     }
 }

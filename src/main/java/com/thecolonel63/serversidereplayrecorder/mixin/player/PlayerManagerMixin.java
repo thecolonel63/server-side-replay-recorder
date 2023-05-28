@@ -24,6 +24,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.function.Predicate;
 
 @Mixin(PlayerManager.class)
 public abstract class PlayerManagerMixin {
@@ -34,8 +35,8 @@ public abstract class PlayerManagerMixin {
 
     @Inject(method = "onPlayerConnect", at= @At("HEAD"))
     private void onConnect(ClientConnection connection, ServerPlayerEntity player, CallbackInfo ci){
-        if (!PlayerRecorder.playerRecorderMap.containsKey(connection)
-                && ServerSideReplayRecorderServer.config.getRecordable_users().contains(player.getGameProfile().getName()) && ServerSideReplayRecorderServer.config.isRecording_enabled()) {
+        if (ServerSideReplayRecorderServer.config.isRecording_enabled() && !PlayerRecorder.playerRecorderMap.containsKey(connection)
+                && ( ServerSideReplayRecorderServer.config.getRecordable_users().contains(player.getGameProfile().getName())) != ServerSideReplayRecorderServer.config.invert_user_list() ) {
             try {
                 ServerSideReplayRecorderServer.LOGGER.info("Started Recording Player %s".formatted(player.getGameProfile().getName()));
 
