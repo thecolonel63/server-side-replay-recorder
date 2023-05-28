@@ -1,6 +1,11 @@
 package com.thecolonel63.serversidereplayrecorder.util;
 
 import com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer;
+import net.minecraft.text.ClickEvent;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
+import org.checkerframework.checker.units.qual.C;
 import org.jetbrains.annotations.NotNull;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -8,6 +13,8 @@ import java.io.*;
 import java.net.URL;
 import java.nio.file.Files;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -84,7 +91,7 @@ public class FileHandlingUtility {
         file.delete();
     }
 
-    public static String uploadToTemp(File file) throws IOException{
+    public static Text uploadToTemp(File file) throws IOException{
         String attachmentName = "file";
         String attachmentFileName = file.getName();
         String crlf = "\r\n";
@@ -143,6 +150,21 @@ public class FileHandlingUtility {
 
         httpUrlConnection.disconnect();
 
-        return response;
+        Text response_text = Text.literal(response).formatted(Formatting.YELLOW);
+
+        if (ServerSideReplayRecorderServer.upload_sites.containsKey(url.getHost())){
+            String regex = ServerSideReplayRecorderServer.upload_sites.getString(url.getHost());
+            Pattern pattern = Pattern.compile(regex);
+            Matcher matcher = pattern.matcher(response);
+            if (matcher.find()){
+                String download_url = matcher.group(1);
+                response_text = Text.literal("%s download link: ".formatted(file.getName())).formatted(Formatting.YELLOW)
+                        .append(Text.literal(download_url)
+                                .formatted(Formatting.UNDERLINE,Formatting.BLUE)
+                                .styled(style -> style.withClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, download_url))));
+            }
+        }
+
+        return response_text;
     }
 }

@@ -29,6 +29,7 @@ public class ServerSideReplayRecorderServer implements ModInitializer {
         builder.enable(YAMLGenerator.Feature.INDENT_ARRAYS_WITH_INDICATOR);
         yaml = new ObjectMapper(builder.build()).configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         placeholders = ResourceBundle.getBundle("placeholders");
+        upload_sites = ResourceBundle.getBundle("upload_sites");
     }
 
     public static final ExecutorService recorderExecutor = Executors.newSingleThreadExecutor(new DefaultThreadFactory("Replay",true));
@@ -36,6 +37,7 @@ public class ServerSideReplayRecorderServer implements ModInitializer {
     private static final ObjectMapper yaml;
 
     public static final ResourceBundle placeholders;
+    public static final ResourceBundle upload_sites;
 
     public static final Logger LOGGER = LoggerFactory.getLogger(ServerSideReplayRecorderServer.class.getName());
 
