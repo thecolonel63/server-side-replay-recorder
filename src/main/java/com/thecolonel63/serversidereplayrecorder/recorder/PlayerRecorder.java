@@ -42,19 +42,25 @@ public class PlayerRecorder extends ReplayRecorder {
     }
 
     @Override
-    protected String getSaveFolder(){
-        String name = (playerName != null) ? playerName : "NONAME";
+    protected String getSaveFolder() {
+        String name;
+        if (ServerSideReplayRecorderServer.config.use_username_for_recordings()) {
+            name = (playerName != null) ? playerName : "NONAME";
+        } else {
+            name = (playerId != null) ? String.valueOf(playerId) : "NONAME";
+        }
+
         if (new File(ServerSideReplayRecorderServer.config.getReplay_folder_name()).isAbsolute())
-            return Paths.get(ServerSideReplayRecorderServer.config.getReplay_folder_name(), PLAYER_FOLDER,name).toString();
+            return Paths.get(ServerSideReplayRecorderServer.config.getReplay_folder_name(), PLAYER_FOLDER, name).toString();
         else
-            return Paths.get(FabricLoader.getInstance().getGameDir().toString(), ServerSideReplayRecorderServer.config.getReplay_folder_name(), PLAYER_FOLDER,name).toString();
+            return Paths.get(FabricLoader.getInstance().getGameDir().toString(), ServerSideReplayRecorderServer.config.getReplay_folder_name(), PLAYER_FOLDER, name).toString();
     }
 
 
     public void onPacket(Packet<?> packet) {
 
-        if (packet instanceof LightUpdateS2CPacket lightUpdateS2CPacket){
-            if(((LightUpdatePacketAccessor)lightUpdateS2CPacket).isOnChunkLoad()){
+        if (packet instanceof LightUpdateS2CPacket lightUpdateS2CPacket) {
+            if (((LightUpdatePacketAccessor) lightUpdateS2CPacket).isOnChunkLoad()) {
                 //be sure to record new chunk light packets
                 packet = new WrappedPacket(packet);
             }
@@ -108,7 +114,7 @@ public class PlayerRecorder extends ReplayRecorder {
 
     private final LocalDateTime start_time = LocalDateTime.now();
 
-    public Duration getUptime(){
+    public Duration getUptime() {
         return Duration.between(start_time, LocalDateTime.now());
     }
 
@@ -123,7 +129,7 @@ public class PlayerRecorder extends ReplayRecorder {
 
     @Override
     public boolean equals(Object obj) {
-        if (obj instanceof PlayerRecorder recorder){
+        if (obj instanceof PlayerRecorder recorder) {
             return this.playerName.equals(recorder.playerName);
         }
         return false;
