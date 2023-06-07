@@ -30,8 +30,8 @@ import net.minecraft.world.WorldProperties;
 import net.minecraft.world.border.WorldBorder;
 import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkStatus;
-import net.minecraft.world.chunk.ReadOnlyChunk;
 import net.minecraft.world.chunk.WorldChunk;
+import net.minecraft.world.chunk.WrapperProtoChunk;
 
 import java.io.File;
 import java.io.IOException;
@@ -115,7 +115,8 @@ public class RegionRecorder extends ReplayRecorder {
                 false,
                 world.isDebugWorld(),
                 world.isFlat(),
-                Optional.empty()
+                Optional.empty(),
+                0
         ));
         onPacket(new FeaturesS2CPacket(FeatureFlags.FEATURE_MANAGER.toId(world.getEnabledFeatures())));
         onPacket(
@@ -177,7 +178,7 @@ public class RegionRecorder extends ReplayRecorder {
             WorldChunk worldChunk = null;
             if (chunk instanceof  WorldChunk)
                 worldChunk = (WorldChunk) chunk;
-            else if (chunk instanceof ReadOnlyChunk readOnlyChunk) {
+            else if (chunk instanceof WrapperProtoChunk readOnlyChunk) {
                 worldChunk = readOnlyChunk.getWrappedChunk();
             }
             // if chunk was already generated
@@ -196,7 +197,7 @@ public class RegionRecorder extends ReplayRecorder {
                         this.viewpoint = new Vec3i(viewpoint.getX(), surface_y + 1, viewpoint.getZ());
                 }
                 //save chunk
-                onPacket(new WrappedPacket(new ChunkDataS2CPacket(worldChunk, world.getLightingProvider(), null, null, true)));
+                onPacket(new WrappedPacket(new ChunkDataS2CPacket(worldChunk, world.getLightingProvider(), null, null)));
                 //--obsolete in new versions
                 //onPacket(new WrappedPacket(new LightUpdateS2CPacket(pos, world.getLightingProvider(), null, null, true)));
                 known_chunk_data.add(pos);

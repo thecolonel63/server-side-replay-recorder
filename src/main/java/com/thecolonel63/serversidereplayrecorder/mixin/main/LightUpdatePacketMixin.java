@@ -20,8 +20,8 @@ public class LightUpdatePacketMixin implements LightUpdatePacketAccessor {
         return onChunkLoad;
     }
 
-    @Inject(method = "<init>(Lnet/minecraft/util/math/ChunkPos;Lnet/minecraft/world/chunk/light/LightingProvider;Ljava/util/BitSet;Ljava/util/BitSet;Z)V", at = @At("RETURN"))
-    void onInit(ChunkPos chunkPos, LightingProvider lightProvider, BitSet bitSet, BitSet bitSet2, boolean nonEdge, CallbackInfo ci){
-        this.onChunkLoad = bitSet == null && bitSet2 == null;
+    @Inject(method = "<init>(Lnet/minecraft/util/math/ChunkPos;Lnet/minecraft/world/chunk/light/LightingProvider;Ljava/util/BitSet;Ljava/util/BitSet;)V", at = @At("RETURN"))
+    void onInit(ChunkPos chunkPos, LightingProvider lightProvider, BitSet skyBits, BitSet blockBits, CallbackInfo ci){
+        this.onChunkLoad = skyBits == null && blockBits == null;
     }
 }

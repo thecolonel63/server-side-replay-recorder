@@ -57,7 +57,7 @@ public abstract class EntityTrackerMixin implements RegionRecorderEntityTracker 
     }
 
     void startTracking(RegionRecorder recorder){
-        this.entry.sendPackets(recorder::onPacket);
+        this.entry.sendPackets(null, recorder::onPacket);
     }
 
     void stopTracking(RegionRecorder recorder){
