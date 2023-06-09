@@ -37,7 +37,7 @@ public class EntityTrackerMixin implements RecorderHolder {
         //send the spawn packets when the tracker is created
         //works also for dimension change as a new tracker is created while changing dimension
         if (recorder != null) {
-            entry.sendPackets(Objects.requireNonNull(this.recorder.get())::onPacket);
+            entry.sendPackets(null, recorder::onPacket);
         }
     }
 

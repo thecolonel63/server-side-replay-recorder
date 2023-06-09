@@ -2,10 +2,8 @@ package com.thecolonel63.serversidereplayrecorder.util;
 
 import com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer;
 import net.minecraft.text.ClickEvent;
-import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import org.checkerframework.checker.units.qual.C;
 import org.jetbrains.annotations.NotNull;
 
 import javax.net.ssl.HttpsURLConnection;
