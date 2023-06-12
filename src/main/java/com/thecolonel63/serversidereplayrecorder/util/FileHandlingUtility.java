@@ -62,6 +62,7 @@ public class FileHandlingUtility {
 
     private static void zipFile(File file, ZipOutputStream zos) throws IOException {
         zos.putNextEntry(new ZipEntry(file.getName()));
+        new OutputStreamWriter(zos);
         BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
         long bytesRead = 0;
         byte[] bytesIn = new byte[BUFFER_SIZE];
