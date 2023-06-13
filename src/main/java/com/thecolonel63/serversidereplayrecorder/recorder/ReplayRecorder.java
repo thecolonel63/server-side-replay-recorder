@@ -88,7 +88,7 @@ public abstract class ReplayRecorder {
             tmp_folder = Paths.get(FabricLoader.getInstance().getGameDir().toString(), ServerSideReplayRecorderServer.config.getReplay_folder_name(), "recording_" + this.hashCode()).toFile();
         tmp_folder.mkdirs();
         recording_file= Paths.get(tmp_folder.getAbsolutePath(), "recording.tmcpr").toFile();
-        fileName = String.format("%s.mcpr", new SimpleDateFormat("yyyy-M-dd_HH-mm-ss").format(new Date()));
+        fileName = String.format("%s.mcpr", new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss").format(new Date()));
 
         long remaining_space = tmp_folder.getUsableSpace();
         long storage_required = (( active_recorders.size() + 1 ) * 2L) * ServerSideReplayRecorderServer.config.getMax_file_size();
