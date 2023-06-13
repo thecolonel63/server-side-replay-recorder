@@ -20,6 +20,7 @@ public class MainConfig {
     private boolean recording_enabled = false;
     private boolean use_server_timestamps = true;
     private boolean assume_unloaded_chunks_dont_change = true;
+    private boolean render_distance_fog_fix = false;
     private long  max_file_size = 10000000000L;
     private URL file_storage_url;
     private boolean debug = false;
@@ -130,5 +131,14 @@ public class MainConfig {
 
     public void setInvert_user_list(boolean invert_user_list) {
         this.invert_user_list = invert_user_list;
+    }
+
+    @JsonProperty(value = "render_distance_fog_fix")
+    public boolean render_distance_fog_fix() {
+        return render_distance_fog_fix;
+    }
+
+    public void setRender_distance_fog_fix(boolean render_distance_fog_fix) {
+        this.render_distance_fog_fix = render_distance_fog_fix;
     }
 }
