@@ -18,6 +18,8 @@ import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.s2c.login.LoginCompressionS2CPacket;
 import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;
 import net.minecraft.network.packet.s2c.play.BundleS2CPacket;
+import net.minecraft.network.packet.s2c.play.ChunkLoadDistanceS2CPacket;
+import net.minecraft.network.packet.s2c.play.GameJoinS2CPacket;
 import net.minecraft.network.packet.s2c.play.LightUpdateS2CPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -206,6 +208,33 @@ public abstract class ReplayRecorder {
     public void onPacket(Packet<?> packet) {
         if (!this.open.get())
             return;
+
+        if (ServerSideReplayRecorderServer.config.render_distance_fog_fix()){
+            if (packet instanceof GameJoinS2CPacket gameJoinS2CPacket){
+                packet = new GameJoinS2CPacket(
+                        gameJoinS2CPacket.playerEntityId(),
+                        gameJoinS2CPacket.debugWorld(),
+                        gameJoinS2CPacket.previousGameMode(),
+                        gameJoinS2CPacket.gameMode(),
+                        gameJoinS2CPacket.dimensionIds(),
+                        gameJoinS2CPacket.registryManager(),
+                        gameJoinS2CPacket.dimensionType(),
+                        gameJoinS2CPacket.dimensionId(),
+                        gameJoinS2CPacket.sha256Seed(),
+                        gameJoinS2CPacket.maxPlayers(),
+                        0,
+                        0,
+                        gameJoinS2CPacket.reducedDebugInfo(),
+                        gameJoinS2CPacket.showDeathScreen(),
+                        gameJoinS2CPacket.debugWorld(),
+                        gameJoinS2CPacket.flatWorld(),
+                        gameJoinS2CPacket.lastDeathLocation(),
+                        gameJoinS2CPacket.portalCooldown()
+                );
+            }else if (packet instanceof ChunkLoadDistanceS2CPacket loadDistanceS2CPacket){
+                packet = new ChunkLoadDistanceS2CPacket(0);
+            }
+        }
 
         if (!startedRecording.getAndSet(true)) {
             active_recorders.add(this);
