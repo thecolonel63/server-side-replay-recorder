@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "serversidereplayrecorder",
-  "version": "${version}",
+  "version": "1.20.x",
   "name": "Server Side Replay Recorder",
   "description": "Records players and/or specific areas in the popular ReplayMod format",
   "authors": ["thecolonel63"],
@@ -30,7 +30,7 @@
   ],
   "depends": {
     "fabricloader": "*",
-    "minecraft": "${mc_version}"
+    "minecraft": "1.20.x"
   },
   "breaks": {
     "carpettisaddition": "1.42.1-"

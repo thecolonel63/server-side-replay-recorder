@@ -30,8 +30,7 @@ dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-    //modCompileOnly "carpet:fabric-carpet:${project.minecraft_version}-${project.carpet_core_version}"
-    modCompileOnly "carpet:fabric-carpet:1.20-pre6-1.4.111+v230525"
+    modCompileOnly "carpet:fabric-carpet:${project.minecraft_version}-${project.carpet_core_version}"
     provided "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:latest.release"
 }
 
