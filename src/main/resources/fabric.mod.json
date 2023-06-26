@@ -22,6 +22,9 @@
   "entrypoints": {
     "main": [
       "com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer"
+    ],
+    "voicechat": [
+      "com.thecolonel63.serversidereplayrecorder.ServerSideVoiceChatPlugin"
     ]
   },
   "accessWidener": "serverReplayMod.accesswidener",
