@@ -1,8 +1,5 @@
 package com.thecolonel63.serversidereplayrecorder.net;
 
-
-
-
 import com.thecolonel63.serversidereplayrecorder.ServerSideVoiceChatPlugin;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.util.Identifier;

@@ -1,6 +1,6 @@
 package com.thecolonel63.serversidereplayrecorder;
 
-import com.thecolonel63.serversidereplayrecorder.recorder.VoiceRecorder;
+import com.thecolonel63.serversidereplayrecorder.util.VoiceRecorder;
 import de.maxhenkel.voicechat.api.VoicechatApi;
 import de.maxhenkel.voicechat.api.VoicechatPlugin;
 import de.maxhenkel.voicechat.api.events.*;
@@ -13,7 +13,7 @@ public class ServerSideVoiceChatPlugin implements VoicechatPlugin {
     public static VoicechatApi SERVERAPI;
     @Override
     public String getPluginId() {
-        return "PaperRecord";
+        return "ServerSideReplayMod";
     }
 
     @Override
@@ -21,16 +21,15 @@ public class ServerSideVoiceChatPlugin implements VoicechatPlugin {
         if (decoder == null) {
             decoder = api.createDecoder();
         }
-        System.out.println("Started recording voice chat using PaperRecord");
+        System.out.println("Started recording voice chat using ServerSideReplayMod");
         this.distance = api.getVoiceChatDistance();
         this.SERVERAPI = api;
+
+
     }
 
     @Override
     public void registerEvents(EventRegistration registration) {
-        registration.registerEvent(EntitySoundPacketEvent.class, VoiceRecorder::onEntitySound);
-        registration.registerEvent(LocationalSoundPacketEvent.class, VoiceRecorder::onLocationalSound);
-        registration.registerEvent(StaticSoundPacketEvent.class, VoiceRecorder::onStaticSound);
         registration.registerEvent(MicrophonePacketEvent.class, VoiceRecorder::onSound);
     }
 }
