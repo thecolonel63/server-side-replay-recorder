@@ -32,7 +32,7 @@ public class VoiceRecorder {
         Collection<ServerPlayer> playersInRange = event.getVoicechat().getPlayersInRange(
                 level,
                 position,
-                ServerSideReplayRecorderServer.server.getPlayerManager().getViewDistance() * 16
+                ServerSideReplayRecorderServer.config.getVoice_recording_range()
         );
 
         sendNearbyPlayerPacket(playersInRange, packet);

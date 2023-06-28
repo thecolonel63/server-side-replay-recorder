@@ -18,6 +18,7 @@ public class ServerSideVoiceChatPlugin implements VoicechatPlugin {
 
     @Override
     public void initialize(VoicechatApi api) {
+        if(!ServerSideReplayRecorderServer.config.isVoice_recording_enabled()) return;
         if (decoder == null) {
             decoder = api.createDecoder();
         }
@@ -30,6 +31,7 @@ public class ServerSideVoiceChatPlugin implements VoicechatPlugin {
 
     @Override
     public void registerEvents(EventRegistration registration) {
+        if(!ServerSideReplayRecorderServer.config.isVoice_recording_enabled()) return;
         registration.registerEvent(MicrophonePacketEvent.class, VoiceRecorder::onSound);
     }
 }

@@ -22,6 +22,8 @@ public class MainConfig {
     private boolean assume_unloaded_chunks_dont_change = true;
     private boolean render_distance_fog_fix = false;
     private long  max_file_size = 10000000000L;
+    private int voice_recording_range = 48;
+    private boolean voice_recording_enabled = false;
     private URL file_storage_url;
     private boolean debug = false;
 
@@ -46,6 +48,22 @@ public class MainConfig {
 
     public void setDebug(boolean debug) {
         this.debug = debug;
+    }
+
+    public int getVoice_recording_range() {
+        return voice_recording_range;
+    }
+
+    public void setVoice_recording_range(int voice_recording_range) {
+        this.voice_recording_range = voice_recording_range;
+    }
+
+    public boolean isVoice_recording_enabled() {
+        return voice_recording_enabled;
+    }
+
+    public void setVoice_recording_enabled(boolean voice_recording_enabled) {
+        this.voice_recording_enabled = voice_recording_enabled;
     }
 
     public long getMax_file_size() {
