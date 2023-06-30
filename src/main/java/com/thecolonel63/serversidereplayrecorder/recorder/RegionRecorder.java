@@ -2,11 +2,15 @@ package com.thecolonel63.serversidereplayrecorder.recorder;
 
 import com.mojang.authlib.GameProfile;
 import com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer;
+import com.thecolonel63.serversidereplayrecorder.net.SecretPacket;
 import com.thecolonel63.serversidereplayrecorder.util.ChunkBox;
 import com.thecolonel63.serversidereplayrecorder.util.WrappedPacket;
 import com.thecolonel63.serversidereplayrecorder.util.interfaces.LightUpdatePacketAccessor;
 import com.thecolonel63.serversidereplayrecorder.util.interfaces.RegionRecorderStorage;
 import com.thecolonel63.serversidereplayrecorder.util.interfaces.RegionRecorderWorld;
+import de.maxhenkel.voicechat.Voicechat;
+import de.maxhenkel.voicechat.config.ServerConfig;
+import de.maxhenkel.voicechat.voice.server.Server;
 import io.netty.buffer.Unpooled;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.entity.player.PlayerAbilities;
@@ -17,6 +21,7 @@ import net.minecraft.network.packet.s2c.login.LoginSuccessS2CPacket;
 import net.minecraft.network.packet.s2c.play.*;
 import net.minecraft.registry.tag.TagPacketSerializer;
 import net.minecraft.resource.featuretoggle.FeatureFlags;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Uuids;
 import net.minecraft.util.collection.DefaultedList;
@@ -32,7 +37,6 @@ import net.minecraft.world.chunk.Chunk;
 import net.minecraft.world.chunk.ChunkStatus;
 import net.minecraft.world.chunk.WorldChunk;
 import net.minecraft.world.chunk.WrapperProtoChunk;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
@@ -216,6 +220,16 @@ public class RegionRecorder extends ReplayRecorder {
         //set the replay viewpoint to the center of the watched region
         onPacket(new PlayerPositionLookS2CPacket(viewpoint.getX() + 0.5d,viewpoint.getY(),viewpoint.getZ() + 0.5d,0f,0f, Collections.emptySet(),0));
         //ready to record changes
+        if(ServerSideReplayRecorderServer.config.isVoice_recording_enabled()){
+            ServerPlayerEntity player = new ServerPlayerEntity(ms, ms.getOverworld(), FAKE_GAMEPROFILE);
+            onPacket(createCustomPacket(new SecretPacket(player, UUID.randomUUID() , Voicechat.SERVER.getServer().getPort(), Voicechat.SERVER_CONFIG)));
+        }
+    }
+
+    private static CustomPayloadS2CPacket createCustomPacket(com.thecolonel63.serversidereplayrecorder.net.Packet<?> packet) {
+        PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
+        packet.toBytes(buf);
+        return new CustomPayloadS2CPacket(packet.getIdentifier(), buf);
     }
 
     @Override

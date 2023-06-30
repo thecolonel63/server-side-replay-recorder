@@ -36,7 +36,7 @@ public class VoiceRecorder {
         );
 
         sendNearbyPlayerPacket(playersInRange, packet);
-        //sendRegionPacket(position, packet);
+        sendRegionPacket(position, packet);
     }
 
     private static Packet<?> createPacket(MicrophonePacketEvent event, UUID id) {
