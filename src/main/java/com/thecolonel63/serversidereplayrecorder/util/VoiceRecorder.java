@@ -12,8 +12,6 @@ import de.maxhenkel.voicechat.api.events.MicrophonePacketEvent;
 import com.thecolonel63.serversidereplayrecorder.net.EntitySoundPacket;
 import com.thecolonel63.serversidereplayrecorder.net.Packet;
 import de.maxhenkel.voicechat.api.opus.OpusDecoder;
-import io.netty.buffer.Unpooled;
-import net.minecraft.network.PacketByteBuf;
 import net.minecraft.network.packet.s2c.play.CustomPayloadS2CPacket;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.math.Vec3d;
@@ -65,13 +63,13 @@ public class VoiceRecorder {
     }
 
     public static void sendPlayerPacket(PlayerRecorder recorder, Packet<?> packet) {
-        CustomPayloadS2CPacket fakePacket = createCustomPacket(packet);
+        CustomPayloadS2CPacket fakePacket = Utils.createCustomPacket(packet);
         recorder.onPacket(fakePacket);
     }
 
     public static void sendRegionPacket(Position pos, Packet<?> packet) {
         Vec3d playerPos = new Vec3d(pos.getX(), pos.getY(), pos.getZ());
-        CustomPayloadS2CPacket fakePacket = createCustomPacket(packet);
+        CustomPayloadS2CPacket fakePacket = Utils.createCustomPacket(packet);
 
         for(RegionRecorder recorder : RegionRecorder.regionRecorderMap.values()){
             if(recorder.region.isInBox(playerPos)){
@@ -80,9 +78,4 @@ public class VoiceRecorder {
         }
     }
 
-    private static CustomPayloadS2CPacket createCustomPacket(Packet<?> packet) {
-        PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
-        packet.toBytes(buf);
-        return new CustomPayloadS2CPacket(packet.getIdentifier(), buf);
-    }
 }

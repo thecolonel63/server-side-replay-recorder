@@ -4,13 +4,12 @@ import com.mojang.authlib.GameProfile;
 import com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer;
 import com.thecolonel63.serversidereplayrecorder.net.SecretPacket;
 import com.thecolonel63.serversidereplayrecorder.util.ChunkBox;
+import com.thecolonel63.serversidereplayrecorder.util.Utils;
 import com.thecolonel63.serversidereplayrecorder.util.WrappedPacket;
 import com.thecolonel63.serversidereplayrecorder.util.interfaces.LightUpdatePacketAccessor;
 import com.thecolonel63.serversidereplayrecorder.util.interfaces.RegionRecorderStorage;
 import com.thecolonel63.serversidereplayrecorder.util.interfaces.RegionRecorderWorld;
 import de.maxhenkel.voicechat.Voicechat;
-import de.maxhenkel.voicechat.config.ServerConfig;
-import de.maxhenkel.voicechat.voice.server.Server;
 import io.netty.buffer.Unpooled;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.entity.player.PlayerAbilities;
@@ -222,14 +221,8 @@ public class RegionRecorder extends ReplayRecorder {
         //ready to record changes
         if(ServerSideReplayRecorderServer.config.isVoice_recording_enabled()){
             ServerPlayerEntity player = new ServerPlayerEntity(ms, ms.getOverworld(), FAKE_GAMEPROFILE);
-            onPacket(createCustomPacket(new SecretPacket(player, UUID.randomUUID() , Voicechat.SERVER.getServer().getPort(), Voicechat.SERVER_CONFIG)));
+            onPacket(Utils.createCustomPacket(new SecretPacket(player, UUID.randomUUID() , Voicechat.SERVER.getServer().getPort(), Voicechat.SERVER_CONFIG)));
         }
-    }
-
-    private static CustomPayloadS2CPacket createCustomPacket(com.thecolonel63.serversidereplayrecorder.net.Packet<?> packet) {
-        PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
-        packet.toBytes(buf);
-        return new CustomPayloadS2CPacket(packet.getIdentifier(), buf);
     }
 
     @Override

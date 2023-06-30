@@ -1,5 +1,9 @@
 package com.thecolonel63.serversidereplayrecorder.util;
 
+import io.netty.buffer.Unpooled;
+import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.packet.s2c.play.CustomPayloadS2CPacket;
+
 public class Utils {
 
     public static short[] bytesToShorts(byte[] bytes) {
@@ -29,6 +33,12 @@ public class Utils {
 
     public static byte[] shortToBytes(short s) {
         return new byte[]{(byte) (s & 0xFF), (byte) ((s >> 8) & 0xFF)};
+    }
+
+    public static CustomPayloadS2CPacket createCustomPacket(com.thecolonel63.serversidereplayrecorder.net.Packet<?> packet) {
+        PacketByteBuf buf = new PacketByteBuf(Unpooled.buffer());
+        packet.toBytes(buf);
+        return new CustomPayloadS2CPacket(packet.getIdentifier(), buf);
     }
 
 }
