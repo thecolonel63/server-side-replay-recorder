@@ -49,7 +49,7 @@ public class ServerSideReplayRecorderServer implements ModInitializer {
     public static void loadConfig() {
         try {
 
-            yaml.findAndRegisterModules();
+//            yaml.findAndRegisterModules();
             config = yaml.readValue(new FileReader(configPath), MainConfig.class);
 
         }catch (FileNotFoundException e){
