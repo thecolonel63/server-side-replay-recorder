@@ -62,7 +62,7 @@ public class ServerSideReplayRecorderServer implements ModInitializer {
 
     public static void saveConfig() {
         try {
-            yaml.findAndRegisterModules();
+//            yaml.findAndRegisterModules();
             //noinspection ResultOfMethodCallIgnored
             new File(FabricLoader.getInstance().getConfigDir().toString()).mkdirs();
             BufferedWriter writer = new BufferedWriter(new FileWriter(configPath));
