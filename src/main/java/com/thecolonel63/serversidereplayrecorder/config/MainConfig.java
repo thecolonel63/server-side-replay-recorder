@@ -2,11 +2,14 @@ package com.thecolonel63.serversidereplayrecorder.config;
 
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.thecolonel63.serversidereplayrecorder.config.model.Region;
 
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class MainConfig {
@@ -24,6 +27,7 @@ public class MainConfig {
     private long  max_file_size = 10000000000L;
     private URL file_storage_url;
     private boolean debug = false;
+    private List<Region> regions = new ArrayList<>();
 
     public MainConfig() {
         try {
@@ -141,4 +145,13 @@ public class MainConfig {
     public void setRender_distance_fog_fix(boolean render_distance_fog_fix) {
         this.render_distance_fog_fix = render_distance_fog_fix;
     }
+
+    public List<Region> getRegions() {
+        return regions;
+    }
+
+    public void setRegions(List<Region> regions) {
+        this.regions = regions;
+    }
+
 }

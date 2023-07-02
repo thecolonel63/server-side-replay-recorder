@@ -6,6 +6,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactoryBuilder;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
 import com.thecolonel63.serversidereplayrecorder.config.MainConfig;
+import com.thecolonel63.serversidereplayrecorder.recorder.ReplayRecorder;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;

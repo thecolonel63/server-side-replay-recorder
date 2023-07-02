@@ -5,6 +5,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.thecolonel63.serversidereplayrecorder.ServerSideReplayRecorderServer;
+import com.thecolonel63.serversidereplayrecorder.config.model.Region;
 import com.thecolonel63.serversidereplayrecorder.recorder.PlayerRecorder;
 import com.thecolonel63.serversidereplayrecorder.recorder.RegionRecorder;
 import com.thecolonel63.serversidereplayrecorder.recorder.ReplayRecorder;
@@ -26,6 +27,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 
+import java.awt.desktop.SystemSleepEvent;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -315,14 +317,19 @@ public class ReplayCommand {
                                                                                                                 if (recorder == null) {
                                                                                                                     ServerCommandSource source = context.getSource();
                                                                                                                     try {
-                                                                                                                        source.sendFeedback(()->Text.literal("Starting Region %s".formatted(regionName)).formatted(Formatting.YELLOW),false);
-                                                                                                                        CompletableFuture<RegionRecorder> future = RegionRecorder.createAsync(regionName, cpos1, cpos2, source.getWorld());
-                                                                                                                        future.thenAcceptAsync(r -> source.sendFeedback(()->Text.literal("Started Recording Region %s, from %d %d to %d %d".formatted(regionName, r.region.min.x, r.region.min.z, r.region.max.x, r.region.max.z)).formatted(Formatting.YELLOW), true),source.getServer());
-                                                                                                                        future.exceptionallyAsync(throwable -> {
-                                                                                                                            throwable.printStackTrace();
-                                                                                                                            context.getSource().sendError(Text.literal("An Exception occurred while starting %s recording".formatted(regionName)).formatted(Formatting.RED));
-                                                                                                                            return null;
-                                                                                                                        }, source.getServer());
+                                                                                                                        Region region = new Region(regionName, pos1, pos2, source.getWorld().toString(), false);
+                                                                                                                        if (ServerSideReplayRecorderServer.config.getRegions().add(region)) {
+                                                                                                                            source.sendFeedback(()->Text.literal("Starting Region %s".formatted(regionName)).formatted(Formatting.YELLOW),false);
+                                                                                                                            CompletableFuture<RegionRecorder> future = RegionRecorder.createAsync(regionName, cpos1, cpos2, source.getWorld());
+
+                                                                                                                            future.thenAcceptAsync(r -> source.sendFeedback(()->Text.literal("Started Recording Region %s, from %d %d to %d %d".formatted(regionName, r.region.min.x, r.region.min.z, r.region.max.x, r.region.max.z)).formatted(Formatting.YELLOW), true),source.getServer());
+                                                                                                                            future.exceptionallyAsync(throwable -> {
+                                                                                                                                throwable.printStackTrace();
+                                                                                                                                context.getSource().sendError(Text.literal("An Exception occurred while starting %s recording".formatted(regionName)).formatted(Formatting.RED));
+                                                                                                                                return null;
+                                                                                                                            }, source.getServer());
+                                                                                                                            ServerSideReplayRecorderServer.saveConfig();
+                                                                                                                        }
                                                                                                                         return 0;
                                                                                                                     } catch (
                                                                                                                             Throwable e) {
