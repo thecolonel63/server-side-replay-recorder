@@ -214,8 +214,8 @@ public abstract class ReplayRecorder {
                 packet = new GameJoinS2CPacket(
                         gameJoinS2CPacket.playerEntityId(),
                         gameJoinS2CPacket.debugWorld(),
-                        gameJoinS2CPacket.previousGameMode(),
                         gameJoinS2CPacket.gameMode(),
+                        gameJoinS2CPacket.previousGameMode(),
                         gameJoinS2CPacket.dimensionIds(),
                         gameJoinS2CPacket.registryManager(),
                         gameJoinS2CPacket.dimensionType(),
