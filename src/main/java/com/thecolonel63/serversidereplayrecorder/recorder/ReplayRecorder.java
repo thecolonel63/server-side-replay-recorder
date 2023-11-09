@@ -209,6 +209,7 @@ public abstract class ReplayRecorder {
         if (!this.open.get())
             return;
 
+        //TODO: Check if the Gamemode and Previous Gamemodes are swapped in 1.20.2+
         if (ServerSideReplayRecorderServer.config.render_distance_fog_fix()){
             if (packet instanceof GameJoinS2CPacket gameJoinS2CPacket){
                 packet = new GameJoinS2CPacket(
